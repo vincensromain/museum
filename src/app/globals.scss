@@ -1,0 +1,17 @@
+* {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  overscroll-behavior: none;
+  color: rgb(252, 252, 252);
+}
+
+body {
+  background-color: #090909;
+}
+
+.inside {
+  max-width: calc(100vw - 3rem);
+  width: 100%;
+  margin: 0 auto;
+}
