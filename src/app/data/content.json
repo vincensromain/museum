@@ -1,0 +1,11 @@
+{
+    "page1": {
+      "title": "Bienvenue sur la page 1",
+      "description": "Voici une description dynamique pour la page 1"
+    },
+    "page2": {
+      "title": "Bienvenue sur la page 2",
+      "description": "Contenu chargé dynamiquement depuis un fichier JSON"
+    }
+  }
+  
