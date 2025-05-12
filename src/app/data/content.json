@@ -1,11 +1,15 @@
 {
-    "visite_musee": {
-      "title": "Bienvenue sur la page 1",
-      "description": "Voici une description dynamique pour la page 1"
-    },
-    "page2": {
-      "title": "Bienvenue sur la page 2",
-      "description": "Contenu chargé dynamiquement depuis un fichier JSON"
-    }
+  "home": {
+    "narration": "Bienvenue sur la page d'accueil",
+    "ctaLink": "/visite_musee",
+    "ctaLabel": "Visiter le musée"
+  },
+  "visite_musee": {
+    "title": "Bienvenue sur la page 1",
+    "description": "Voici une description dynamique pour la page 1"
+  },
+  "page2": {
+    "title": "Bienvenue sur la page 2",
+    "description": "Contenu chargé dynamiquement depuis un fichier JSON"
   }
-  
+}

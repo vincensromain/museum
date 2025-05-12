@@ -147,13 +147,16 @@ export default function Visite_musee() {
       const orb = pastilles[i];
       const light = lights[i];
       orb.material.emissiveIntensity = params.emissiveIntensity;
+      light.intensity = 0;
       gsap.to(orb.material, {
         emissiveIntensity: params.emissiveIntensity + 0.5,
         duration: 2,
+        ease: "sine.inOut",
       });
       gsap.to(light, {
         intensity: params.intensity,
         duration: 2,
+        ease: "sine.inOut",
       });
     };
     activateOrb(0);
@@ -181,13 +184,20 @@ export default function Visite_musee() {
       const endQuat = camera.quaternion.clone();
       camera.quaternion.copy(startQuat);
 
-      gsap.to(camera.position, { ...target, duration: 1.5 });
+      gsap.to(camera.position, {
+        x: target.x,
+        y: target.y,
+        z: target.z,
+        duration: 1.5,
+        ease: "power2.inOut",
+      });
       gsap.to(camera.quaternion, {
         x: endQuat.x,
         y: endQuat.y,
         z: endQuat.z,
         w: endQuat.w,
         duration: 1.5,
+        ease: "power2.inOut",
         onComplete: () => (returnBtn.style.display = "block"),
       });
     });
@@ -213,6 +223,7 @@ export default function Visite_musee() {
         y: initialCamPos.y,
         z: initialCamPos.z,
         duration: 1.5,
+        ease: "power2.inOut",
       });
       gsap.to(camera.quaternion, {
         x: initialCamQuat.x,
@@ -220,6 +231,7 @@ export default function Visite_musee() {
         z: initialCamQuat.z,
         w: initialCamQuat.w,
         duration: 1.5,
+        ease: "power2.inOut",
         onComplete: () => {
           currentIndex++;
           if (currentIndex < pastilles.length) activateOrb(currentIndex);

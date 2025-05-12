@@ -17,10 +17,17 @@
     }
 
     .orb {
-      width: 86px;
-      height: 86px;
-      background: red;
-      border-radius: 50%;
+      width: 200px;
+      height: 200px;
+      background-color: transparent;
+      position: relative;
+
+      .webgl_orb {
+        width: 200px;
+        height: 200px;
+        position: absolute;
+        background-color: transparent;
+      }
     }
   }
 
