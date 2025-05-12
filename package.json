@@ -12,11 +12,13 @@
     "@gsap/react": "^2.1.2",
     "@studio-freight/react-lenis": "^0.0.47",
     "gsap": "^3.12.7",
+    "lil-gui": "^0.20.0",
     "next": "15.2.0",
     "next-view-transitions": "^0.3.4",
     "react": "^18.0.0",
     "react-dom": "^18.0.0",
     "sass": "^1.85.1",
-    "split-type": "^0.3.4"
+    "split-type": "^0.3.4",
+    "three": "^0.176.0"
   }
 }

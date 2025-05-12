@@ -7,7 +7,18 @@
 }
 
 body {
-  background-color: #090909;
+  background: linear-gradient(180deg, #182628 5%, #54888e 100%);
+  height: 100vh;
+  overflow: hidden;
+}
+
+canvas {
+  top: 0;
+  position: fixed;
+  width: 100vw;
+  height: 100vh;
+  background-color: transparent;
+  z-index: -1;
 }
 
 .inside {

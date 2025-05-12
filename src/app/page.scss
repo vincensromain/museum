@@ -1,10 +1,34 @@
 .home {
-  height: 100vh;
+  height: 100dvh;
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  justify-content: space-between;
   align-items: center;
-  h1 {
-    font-size: 200px;
-    text-transform: uppercase;
+
+  .narration {
+    padding-top: 50px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 40px;
+
+    .narration_text {
+      text-align: center;
+    }
+
+    .orb {
+      width: 86px;
+      height: 86px;
+      background: red;
+      border-radius: 50%;
+    }
+  }
+
+  .cta {
+    margin-bottom: 60px;
+    padding: 10px 12px;
+    background-color: white;
+    color: #54888e;
+    text-decoration: none;
   }
 }

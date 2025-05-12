@@ -1,0 +1,14 @@
+.visite_musee {
+  background-color: red;
+
+  .webgl {
+    position: fixed;
+    z-index: 2;
+    top: 0;
+    left: 0;
+  }
+
+  button {
+    z-index: 3;
+  }
+}
