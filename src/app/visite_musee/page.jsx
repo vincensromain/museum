@@ -1,31 +1,43 @@
+// Visite_musee.jsx
 "use client";
 
-import { useRef, useEffect } from "react";
+import { useRef, useLayoutEffect, useState } from "react";
 import * as THREE from "three";
 import GUI from "lil-gui";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import gsap from "gsap";
-
+import IconMuseum from "../components/IconsMuseum/IconsMuseum";
+import Link from "next/link";
 import "./visite_musee.scss";
 
 export default function Visite_musee() {
   const canvasRef = useRef(null);
+  const cameraRef = useRef(null);
+  const initialCamPosRef = useRef(null);
+  const initialCamQuatRef = useRef(null);
+  const currentIndexRef = useRef(0);
+  const isMovingRef = useRef(false);
+  const pastillesRef = useRef([]);
+  const lightsRef = useRef([]);
+  const activateOrbRef = useRef(null);
+  const lastViewedOrbRef = useRef(0); // Track the last viewed orb
 
-  useEffect(() => {
+  const [showReturn, setShowReturn] = useState(false);
+
+  useLayoutEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
     // —————————————————————————————
-    //   Taille & scène
+    //   Scène et taille
     // —————————————————————————————
     const scene = new THREE.Scene();
     const sizes = { width: window.innerWidth, height: window.innerHeight };
-
     const onResize = () => {
       sizes.width = window.innerWidth;
       sizes.height = window.innerHeight;
-      camera.aspect = sizes.width / sizes.height;
-      camera.updateProjectionMatrix();
+      cameraRef.current.aspect = sizes.width / sizes.height;
+      cameraRef.current.updateProjectionMatrix();
       renderer.setSize(sizes.width, sizes.height);
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     };
@@ -43,8 +55,9 @@ export default function Visite_musee() {
     camera.position.set(0, 4, 15);
     camera.rotation.x = -THREE.MathUtils.degToRad(30);
     scene.add(camera);
-    const initialCamPos = camera.position.clone();
-    const initialCamQuat = camera.quaternion.clone();
+    cameraRef.current = camera;
+    initialCamPosRef.current = camera.position.clone();
+    initialCamQuatRef.current = camera.quaternion.clone();
 
     // —————————————————————————————
     //   Renderer
@@ -56,7 +69,7 @@ export default function Visite_musee() {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
     // —————————————————————————————
-    //   Chargement du modèle GLTF centré
+    //   Chargement du modèle
     // —————————————————————————————
     const gltfLoader = new GLTFLoader();
     gltfLoader.load("/models/Musee/musee.glb", (gltf) => {
@@ -73,8 +86,6 @@ export default function Visite_musee() {
     // —————————————————————————————
     //   Pastilles + lumières
     // —————————————————————————————
-    const pastilles = [];
-    const lights = [];
     const positions = [
       new THREE.Vector3(1.7, -1, 10.5),
       new THREE.Vector3(0.3, -1.1, 8),
@@ -82,6 +93,14 @@ export default function Visite_musee() {
       new THREE.Vector3(4, -1, 4),
       new THREE.Vector3(-2, 0.5, 1),
     ];
+    const params = {
+      intensity: 2,
+      emissiveIntensity: 1.5,
+      distance: 5,
+      decay: 2,
+      color: "#ffffff",
+    };
+
     positions.forEach((pos) => {
       const color = new THREE.Color(0xffffff);
       const geom = new THREE.SphereGeometry(0.3, 32, 32);
@@ -95,59 +114,52 @@ export default function Visite_musee() {
       const orb = new THREE.Mesh(geom, mat);
       orb.position.copy(pos);
       scene.add(orb);
-      pastilles.push(orb);
+      pastillesRef.current.push(orb);
 
-      const light = new THREE.PointLight(color, 0, 5, 2);
+      // light
+      const light = new THREE.PointLight(
+        color,
+        0,
+        params.distance,
+        params.decay
+      );
       light.position.copy(pos);
       scene.add(light);
-      lights.push(light);
+      lightsRef.current.push(light);
     });
 
     // —————————————————————————————
-    //   GUI pour régler les lumières
+    //   GUI
     // —————————————————————————————
     const gui = new GUI();
-    const params = {
-      intensity: 2,
-      emissiveIntensity: 1.5,
-      distance: 5,
-      decay: 2,
-      color: "#ffffff",
-    };
     const folder = gui.addFolder("Lights");
     folder
       .add(params, "intensity", 0, 10, 0.1)
-      .onChange((v) => lights.forEach((l) => (l.intensity = v)));
+      .onChange((v) => lightsRef.current.forEach((l) => (l.intensity = v)));
     folder
       .add(params, "emissiveIntensity", 0, 5, 0.1)
       .onChange((v) =>
-        pastilles.forEach((o) => (o.material.emissiveIntensity = v))
+        pastillesRef.current.forEach((o) => (o.material.emissiveIntensity = v))
       );
     folder
       .add(params, "distance", 0, 50, 1)
-      .onChange((v) => lights.forEach((l) => (l.distance = v)));
+      .onChange((v) => lightsRef.current.forEach((l) => (l.distance = v)));
     folder
       .add(params, "decay", 0, 5, 0.1)
-      .onChange((v) => lights.forEach((l) => (l.decay = v)));
+      .onChange((v) => lightsRef.current.forEach((l) => (l.decay = v)));
     folder.addColor(params, "color").onChange((hex) => {
-      lights.forEach((l) => l.color.set(hex));
-      pastilles.forEach((o) => {
+      lightsRef.current.forEach((l) => l.color.set(hex));
+      pastillesRef.current.forEach((o) => {
         o.material.color.set(hex);
         o.material.emissive.set(hex);
       });
     });
     folder.open();
 
-    // —————————————————————————————
-    //   Activation des orbes
-    // —————————————————————————————
-    let currentIndex = 0;
-    let isMoving = false;
     const activateOrb = (i) => {
-      const orb = pastilles[i];
-      const light = lights[i];
+      const orb = pastillesRef.current[i];
+      const light = lightsRef.current[i];
       orb.material.emissiveIntensity = params.emissiveIntensity;
-      light.intensity = 0;
       gsap.to(orb.material, {
         emissiveIntensity: params.emissiveIntensity + 0.5,
         duration: 2,
@@ -159,108 +171,119 @@ export default function Visite_musee() {
         ease: "sine.inOut",
       });
     };
-    activateOrb(0);
+    activateOrbRef.current = activateOrb;
+    activateOrbRef.current(0);
 
-    // —————————————————————————————
-    //   Raycaster & navigation
-    // —————————————————————————————
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
-    canvas.addEventListener("click", (e) => {
-      if (isMoving) return;
+    const onClickCanvas = (e) => {
+      if (isMovingRef.current) return;
       mouse.x = (e.clientX / sizes.width) * 2 - 1;
       mouse.y = -(e.clientY / sizes.height) * 2 + 1;
-      raycaster.setFromCamera(mouse, camera);
-      const hits = raycaster.intersectObjects([pastilles[currentIndex]]);
+      raycaster.setFromCamera(mouse, cameraRef.current);
+      const hits = raycaster.intersectObjects(pastillesRef.current);
       if (!hits.length) return;
-      isMoving = true;
-      const sel = hits[0].object;
-      const dir = new THREE.Vector3()
-        .subVectors(camera.position, sel.position)
-        .normalize();
-      const target = sel.position.clone().add(dir.multiplyScalar(1));
-      const startQuat = camera.quaternion.clone();
-      camera.lookAt(sel.position);
-      const endQuat = camera.quaternion.clone();
-      camera.quaternion.copy(startQuat);
 
-      gsap.to(camera.position, {
-        x: target.x,
-        y: target.y,
-        z: target.z,
-        duration: 1.5,
-        ease: "power2.inOut",
-      });
-      gsap.to(camera.quaternion, {
-        x: endQuat.x,
-        y: endQuat.y,
-        z: endQuat.z,
-        w: endQuat.w,
-        duration: 1.5,
-        ease: "power2.inOut",
-        onComplete: () => (returnBtn.style.display = "block"),
-      });
-    });
+      const clickedOrbIndex = pastillesRef.current.indexOf(hits[0].object);
+      if (clickedOrbIndex <= currentIndexRef.current) {
+        isMovingRef.current = true;
+        const sel = hits[0].object;
+        const dir = new THREE.Vector3()
+          .subVectors(cameraRef.current.position, sel.position)
+          .normalize();
+        const target = sel.position.clone().add(dir.multiplyScalar(1));
+        const startQuat = cameraRef.current.quaternion.clone();
+        cameraRef.current.lookAt(sel.position);
+        const endQuat = cameraRef.current.quaternion.clone();
+        cameraRef.current.quaternion.copy(startQuat);
 
-    // Bouton Retour
-    const returnBtn = document.createElement("button");
-    returnBtn.textContent = "Retour";
-    Object.assign(returnBtn.style, {
-      position: "absolute",
-      top: "50%",
-      left: "50%",
-      transform: "translate(-50%, -50%)",
-      padding: "1em 2em",
-      fontSize: "1.2em",
-      display: "none",
-      zIndex: 10,
-    });
-    document.body.appendChild(returnBtn);
-    returnBtn.addEventListener("click", () => {
-      returnBtn.style.display = "none";
-      gsap.to(camera.position, {
-        x: initialCamPos.x,
-        y: initialCamPos.y,
-        z: initialCamPos.z,
-        duration: 1.5,
-        ease: "power2.inOut",
-      });
-      gsap.to(camera.quaternion, {
-        x: initialCamQuat.x,
-        y: initialCamQuat.y,
-        z: initialCamQuat.z,
-        w: initialCamQuat.w,
-        duration: 1.5,
-        ease: "power2.inOut",
-        onComplete: () => {
-          currentIndex++;
-          if (currentIndex < pastilles.length) activateOrb(currentIndex);
-          isMoving = false;
-        },
-      });
-    });
+        gsap.to(cameraRef.current.position, {
+          x: target.x,
+          y: target.y,
+          z: target.z,
+          duration: 1.5,
+          ease: "power2.inOut",
+        });
+        gsap.to(cameraRef.current.quaternion, {
+          x: endQuat.x,
+          y: endQuat.y,
+          z: endQuat.z,
+          w: endQuat.w,
+          duration: 1.5,
+          ease: "power2.inOut",
+          onComplete: () => {
+            setShowReturn(true);
+            lastViewedOrbRef.current = clickedOrbIndex; // Update the last viewed orb
+          },
+        });
+      }
+    };
+    canvas.addEventListener("click", onClickCanvas);
 
-    // —————————————————————————————
-    //   Boucle d’animation
-    // —————————————————————————————
     const tick = () => {
-      renderer.render(scene, camera);
+      renderer.render(scene, cameraRef.current);
       requestAnimationFrame(tick);
     };
     tick();
 
     // Cleanup
     return () => {
+      window.removeEventListener("resize", onResize);
+      canvas.removeEventListener("click", onClickCanvas);
       renderer.dispose();
       gui.destroy();
-      window.removeEventListener("resize", onResize);
-      document.body.removeChild(returnBtn);
     };
   }, []);
+
+  const modalAppear = () => {
+    const cam = cameraRef.current;
+    const initPos = initialCamPosRef.current;
+    const initQuat = initialCamQuatRef.current;
+
+    setShowReturn(false);
+    gsap.to(cam.position, {
+      x: initPos.x,
+      y: initPos.y,
+      z: initPos.z,
+      duration: 1.5,
+      ease: "power2.inOut",
+    });
+    gsap.to(cam.quaternion, {
+      x: initQuat.x,
+      y: initQuat.y,
+      z: initQuat.z,
+      w: initQuat.w,
+      duration: 1.5,
+      ease: "power2.inOut",
+      onComplete: () => {
+        if (lastViewedOrbRef.current === currentIndexRef.current) {
+          currentIndexRef.current += 1;
+          if (currentIndexRef.current < pastillesRef.current.length) {
+            activateOrbRef.current(currentIndexRef.current);
+          }
+        }
+        isMovingRef.current = false;
+      },
+    });
+  };
 
   return (
     <div className="visite_musee">
       <canvas ref={canvasRef} className="webgl" />
+      <div className={`modal ${showReturn ? "active" : ""}`}>
+        <div className="modal_content">
+          <IconMuseum icon={"svgScan"} width={10.25} height={14.35} />
+          <h2 className="artwork_name"></h2>
+
+          <div className="hypertext">
+            <Link href="./vestige_1" className="hypertext_link">
+              Je n'ai pas accès à la puce NFC
+            </Link>
+          </div>
+
+          <button onClick={modalAppear}>Fermer</button>
+        </div>
+      </div>
     </div>
   );
 }

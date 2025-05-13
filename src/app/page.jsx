@@ -2,72 +2,93 @@
 
 import { useRef, useEffect } from "react";
 import Link from "next/link";
-import content from "@/app/data/content.json";
+import content from "./data/content.json";
 import "./page.scss";
 import * as THREE from "three";
+import GUI from "lil-gui";
 
 export default function Home() {
-  const canvasRef = useRef(null);
+  const canvasRef = useRef(null); // plus de <HTMLCanvasElement> here
   const { narration, ctaLink, ctaLabel } = content.home;
 
   useEffect(() => {
+    if (!canvasRef.current) return;
+    const canvas = canvasRef.current;
+    const ratio = window.devicePixelRatio || 1;
+    const size = 200;
+
+    // scène / caméra / renderer
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(
-      75,
-      1, // Ratio 1:1 pour 200x200 pixels
-      0.1,
-      1000
-    );
-
+    const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
+    camera.position.z = 3;
     const renderer = new THREE.WebGLRenderer({
-      canvas: canvasRef.current,
-      alpha: true, // Active la transparence
+      canvas,
+      alpha: true,
+      antialias: true,
     });
-    renderer.setSize(200, 200); // Taille du canvas
-    renderer.setClearColor(0x000000, 0); // Fond transparent
+    renderer.setPixelRatio(ratio);
+    renderer.setSize(size, size);
+    renderer.setClearColor(0x000000, 0);
 
-    const dirLight = new THREE.DirectionalLight("#ffffff", 0.75);
-    dirLight.position.set(5, 5, 5);
+    // géométrie
+    const geometry = new THREE.IcosahedronGeometry(1, 128);
 
-    const ambientLight = new THREE.AmbientLight("#ffffff", 0.2);
-    scene.add(dirLight, ambientLight);
+    // uniforms (sans annotation TS)
+    const uniforms = {
+      u_time: { value: 0 },
+      u_mouse: { value: new THREE.Vector2(0.5, 0.5) },
+      u_resolution: { value: new THREE.Vector2(size * ratio, size * ratio) },
+      u_edgeSoftness: { value: 0.05 },
+    };
 
-    const geometry = new THREE.IcosahedronGeometry(1, 150);
+    // souris
+    canvas.addEventListener("mousemove", (e) => {
+      const r = canvas.getBoundingClientRect();
+      uniforms.u_mouse.value.x = (e.clientX - r.left) / r.width;
+      uniforms.u_mouse.value.y = 1 - (e.clientY - r.top) / r.height;
+    });
 
-    fetch("/shaders/fragment.glsl")
-      .then((res) => res.text())
-      .then((fragmentShader) => {
-        fetch("/shaders/vertex.glsl")
-          .then((res) => res.text())
-          .then((vertexShader) => {
-            const material = new THREE.ShaderMaterial({
-              vertexShader: vertexShader,
-              fragmentShader: fragmentShader,
-            });
+    // GUI
+    const gui = new GUI();
+    const params = { edgeSoftness: uniforms.u_edgeSoftness.value };
+    gui
+      .add(params, "edgeSoftness", 0.0, 0.2, 0.001)
+      .name("Edge Softness")
+      .onChange((v) => (uniforms.u_edgeSoftness.value = v));
 
-            material.uniforms.uTime = { value: 0 };
+    // material + mesh + animation
+    let material, mesh, raf;
+    let t = 0;
 
-            const shape = new THREE.Mesh(geometry, material);
-            scene.add(shape);
-
-            camera.position.z = 3;
-
-            let time = 0;
-            function animate() {
-              material.uniforms.uTime.value = time;
-
-              time += 0.003;
-
-              requestAnimationFrame(animate);
-              renderer.render(scene, camera);
-            }
-
-            animate();
-          });
+    Promise.all([
+      fetch("/shaders/vertex.glsl").then((r) => r.text()),
+      fetch("/shaders/fragment.glsl").then((r) => r.text()),
+    ]).then(([vs, fs]) => {
+      material = new THREE.ShaderMaterial({
+        vertexShader: vs,
+        fragmentShader: fs,
+        uniforms,
+        transparent: true,
+        depthWrite: false,
       });
+      mesh = new THREE.Mesh(geometry, material);
+      scene.add(mesh);
+
+      const animate = () => {
+        t += 0.01;
+        uniforms.u_time.value = t;
+        renderer.render(scene, camera);
+        raf = requestAnimationFrame(animate);
+      };
+      animate();
+    });
 
     return () => {
-      // Cleanup code if necessary
+      cancelAnimationFrame(raf);
+      gui.destroy();
+      geometry.dispose();
+      material.dispose();
+      renderer.dispose();
     };
   }, []);
 
@@ -77,7 +98,7 @@ export default function Home() {
         <div className="narration">
           <p className="narration_text">{narration}</p>
           <div className="orb">
-            <canvas ref={canvasRef} className="webgl_orb" id="myCanvas" />
+            <canvas ref={canvasRef} className="webgl_orb" />
           </div>
         </div>
         <Link href={ctaLink || "#"} className="cta">
