@@ -6,18 +6,20 @@ import "./Loader.scss";
 export default function Loader({ setIsLoading }) {
   const loaderRef = useRef(null);
   const totalPaths = 9;
-  const duration = 2.8;
-  const interval = duration / totalPaths;
-
+  const minDuration = 1;
   useEffect(() => {
     const el = loaderRef.current;
-
-    // Initialise toutes les paths à 0.3
     for (let i = 1; i <= totalPaths; i++) {
       gsap.set(`.path_${i}`, { opacity: 0.3 });
     }
 
+    const startTime = Date.now();
+
     const onReady = () => {
+      const loadTime = (Date.now() - startTime) / 1000;
+      const finalDuration = Math.max(loadTime, minDuration);
+      const interval = finalDuration / totalPaths;
+
       const timeline = gsap.timeline({
         onComplete: () => {
           gsap.to(el, {
@@ -45,7 +47,6 @@ export default function Loader({ setIsLoading }) {
       }
     };
 
-    // Si le site est déjà prêt (mobile, cache rapide, etc.)
     if (document.readyState === "complete") {
       onReady();
     } else {
