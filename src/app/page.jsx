@@ -26,30 +26,32 @@ export default function Home() {
 
     if (!icon || !cta || !text) return;
 
-    gsap
+    // 👉 timeline de rebond assignée à une variable
+    const hintTl = gsap
       .timeline({ delay: 0.8 })
       .to(icon, { x: 10, duration: 0.8, ease: "power2.out" })
       .to(icon, { x: 0, duration: 0.4, ease: "power2.inOut" })
-      .to({}, { duration: 0.5 }) // pause "wait"
+      .to({}, { duration: 0.5 })
       .to(icon, { x: 10, duration: 0.8, ease: "power2.out" })
       .to(icon, { x: 0, duration: 0.4, ease: "power2.inOut" });
 
     const iconWidth = icon.offsetWidth;
     const ctaWidth = cta.offsetWidth;
-
-    const leftPadding = 7;
-    const rightPadding = 17;
-
+    const rightPadding = 13.5;
     const maxX = ctaWidth - iconWidth - rightPadding;
 
     Draggable.create(icon, {
       type: "x",
       bounds: { minX: 0, maxX },
       inertia: true,
+      // ⛔ dès qu'on appuie, on tue la timeline
+      onPress: function () {
+        hintTl.kill();
+      },
       onDrag: function () {
         const progress = this.x / maxX;
         gsap.to(text, {
-          opacity: 1 - progress,
+          opacity: 1 - progress * 2,
           duration: 0.1,
           overwrite: "auto",
         });
