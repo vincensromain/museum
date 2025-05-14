@@ -2,7 +2,7 @@
 
 import { useRef, useEffect } from "react";
 import Link from "next/link";
-import content from "./data/content.json";
+import content from "@/app/data/content.json";
 import "./page.scss";
 import * as THREE from "three";
 import GUI from "lil-gui";
