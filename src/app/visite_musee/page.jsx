@@ -6,7 +6,7 @@ import * as THREE from "three";
 import GUI from "lil-gui";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import gsap from "gsap";
-import content from "@/app/data/content.json";
+import content from "../data/content.json";
 
 import IconMuseum from "../components/IconsMuseum/IconsMuseum";
 import Link from "next/link";

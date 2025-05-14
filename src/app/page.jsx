@@ -2,6 +2,7 @@
 
 import { useRef, useEffect } from "react";
 import Link from "next/link";
+import content from "./data/content.json";
 
 import "./page.scss";
 import * as THREE from "three";
@@ -98,8 +99,8 @@ export default function Home() {
         <div className="narration">
           <div className="orb"></div>
         </div>
-        <Link href="/" className="cta">
-          continuer
+        <Link href={ctaLink || "#"} className="cta">
+          {ctaLabel}
         </Link>
       </section>
     </main>
