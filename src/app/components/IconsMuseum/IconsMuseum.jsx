@@ -26,6 +26,39 @@ const IconMuseum = ({ icon, ...props }) => {
         />
       </svg>
     ),
+    svgDino1: (
+      <svg
+        width="209"
+        height="209"
+        viewBox="0 0 209 209"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <circle cx="104.5" cy="104.5" r="104.5" fill="#FF0000" />
+      </svg>
+    ),
+    svgDino2: (
+      <svg
+        width="209"
+        height="209"
+        viewBox="0 0 209 209"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <circle cx="104.5" cy="104.5" r="104.5" fill="#375BFF" />
+      </svg>
+    ),
+    svgDino3: (
+      <svg
+        width="209"
+        height="209"
+        viewBox="0 0 209 209"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <circle cx="104.5" cy="104.5" r="104.5" fill="#FF00E1" />
+      </svg>
+    ),
   };
 
   return icons[icon] || null;

@@ -8,8 +8,43 @@
     "title": "Bienvenue sur la page 1",
     "description": "Voici une description dynamique pour la page 1"
   },
-  "page2": {
-    "title": "Bienvenue sur la page 2",
-    "description": "Contenu chargé dynamiquement depuis un fichier JSON"
-  }
+
+  "artworks": [
+      {
+        "id": 0,
+        "icon": "svgDino1",
+        "title": "Squelette de dinosaure",
+        "description": "Vestige fossile d'une espèce disparue.",
+        "link": "./vestige_1"
+      },
+      {
+        "id": 1,
+        "icon": "svgDino2",
+        "title": "Crâne kjkjekljrlkjerljh",
+        "description": "Traces d'une époque lointaine.",
+        "link": "./vestige_2"
+      },
+      {
+        "id": 2,
+        "icon": "svgDino3",
+        "title": "Fémur géant",
+        "description": "Un os imposant issu d’un géant disparu.",
+        "link": "./vestige_3"
+      },
+      {
+        "id": 3,
+        "icon": "svgDino4",
+        "title": "Œuf fossilisé",
+        "description": "Preuve d'une reproduction ancienne.",
+        "link": "./vestige_4"
+      },
+      {
+        "id": 4,
+        "icon": "svgDino5",
+        "title": "Griffes fossilisées",
+        "description": "Outils de chasse figés dans le temps.",
+        "link": "./vestige_5"
+      }
+    ]
+  
 }

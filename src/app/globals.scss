@@ -6,8 +6,24 @@
   color: rgb(252, 252, 252);
 }
 
+$gradient-variant-1: linear-gradient(
+  to bottom,
+  #011a1e,
+  #22424c,
+  #00818f,
+  #49a1aa
+);
+$gradient-variant-2: linear-gradient(
+  to bottom,
+  #011a1e,
+  #22424c,
+  #00818f,
+  #b9d7d7
+);
+$gradient-variant-3: linear-gradient(135deg, #e0c3fc, #8ec5fc);
+
 body {
-  background: linear-gradient(180deg, #182628 5%, #54888e 100%);
+  background: $gradient-variant-1;
   height: 100vh;
   overflow: hidden;
 }

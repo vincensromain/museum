@@ -6,6 +6,8 @@ import * as THREE from "three";
 import GUI from "lil-gui";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import gsap from "gsap";
+import content from "@/app/data/content.json";
+
 import IconMuseum from "../components/IconsMuseum/IconsMuseum";
 import Link from "next/link";
 import "./visite_musee.scss";
@@ -123,6 +125,7 @@ export default function Visite_musee() {
         params.distance,
         params.decay
       );
+
       light.position.copy(pos);
       scene.add(light);
       lightsRef.current.push(light);
@@ -272,15 +275,32 @@ export default function Visite_musee() {
       <canvas ref={canvasRef} className="webgl" />
       <div className={`modal ${showReturn ? "active" : ""}`}>
         <div className="modal_content">
-          <IconMuseum icon={"svgScan"} width={10.25} height={14.35} />
-          <h2 className="artwork_name"></h2>
-
-          <div className="hypertext">
-            <Link href="./vestige_1" className="hypertext_link">
-              Je n'ai pas accès à la puce NFC
-            </Link>
-          </div>
-
+          {content.artworks[lastViewedOrbRef.current] && (
+            <>
+              <div className="icon">
+                <IconMuseum icon="svgScan" width={56} height={56} />
+                <IconMuseum
+                  icon={content.artworks[lastViewedOrbRef.current].icon}
+                  width={30}
+                  height={30}
+                />
+              </div>
+              <h2 className="artwork_name">
+                {content.artworks[lastViewedOrbRef.current].title}
+              </h2>
+              <p className="artwork_description">
+                {content.artworks[lastViewedOrbRef.current].description}
+              </p>
+              <div className="hypertext">
+                <Link
+                  href={content.artworks[lastViewedOrbRef.current].link}
+                  className="hypertext_link"
+                >
+                  Je n'ai pas accès à la puce NFC
+                </Link>
+              </div>
+            </>
+          )}
           <button onClick={modalAppear}>Fermer</button>
         </div>
       </div>

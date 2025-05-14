@@ -8,7 +8,7 @@ import * as THREE from "three";
 import GUI from "lil-gui";
 
 export default function Home() {
-  const canvasRef = useRef(null); // plus de <HTMLCanvasElement> here
+  const canvasRef = useRef(null);
   const { narration, ctaLink, ctaLabel } = content.home;
 
   useEffect(() => {
