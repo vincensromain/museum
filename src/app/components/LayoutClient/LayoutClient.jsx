@@ -10,17 +10,17 @@ export default function LayoutClient({ children }) {
 
   return (
     <>
-      {/* {isLoading && <Loader setIsLoading={setIsLoading} />}
-      {!isLoading && ( */}
-      <>
-        <Noise />
+      {isLoading && <Loader setIsLoading={setIsLoading} />}
+      {!isLoading && (
+        <>
+          <Noise />
 
-        <AppearRef delay={0.2}>
-          <LogoHeader />
-        </AppearRef>
-        {children}
-      </>
-      {/* )} */}
+          <AppearRef delay={0.2}>
+            <LogoHeader />
+          </AppearRef>
+          {children}
+        </>
+      )}
     </>
   );
 }
