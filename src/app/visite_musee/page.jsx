@@ -1,4 +1,3 @@
-// Visite_musee.jsx
 "use client";
 
 import { useRef, useLayoutEffect, useState } from "react";
@@ -22,7 +21,7 @@ export default function Visite_musee() {
   const pastillesRef = useRef([]);
   const lightsRef = useRef([]);
   const activateOrbRef = useRef(null);
-  const lastViewedOrbRef = useRef(0); // Track the last viewed orb
+  const lastViewedOrbRef = useRef(0);
 
   const [showReturn, setShowReturn] = useState(false);
 

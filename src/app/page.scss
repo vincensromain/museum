@@ -32,10 +32,37 @@
   }
 
   .cta {
-    margin-bottom: 60px;
-    padding: 10px 12px;
-    background-color: white;
-    color: #54888e;
+    position: absolute;
+    bottom: 164px;
+    width: 183px;
+    height: 42px;
+    background: #18262842;
+    border-radius: 27px;
+    display: flex;
+    align-items: center;
     text-decoration: none;
+
+    .cta_content {
+      padding: 9px 6.5px 9.5px 17.5px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+
+      .cta_text {
+        color: #8cd1d7;
+        font-size: 20px;
+      }
+
+      .cta_icon {
+        width: 33px;
+        height: 33px;
+        border-radius: 50%;
+        background: #011a1e39;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+    }
   }
 }

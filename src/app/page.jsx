@@ -3,6 +3,7 @@
 import { useRef, useEffect } from "react";
 import Link from "next/link";
 import content from "./data/content.json";
+import IconMuseum from "./components/IconsMuseum/IconsMuseum";
 
 import "./page.scss";
 import * as THREE from "three";
@@ -100,7 +101,12 @@ export default function Home() {
           <div className="orb"></div>
         </div>
         <Link href={ctaLink || "#"} className="cta">
-          {ctaLabel}
+          <span className="cta_content">
+            <span className="cta_text">{ctaLabel}</span>
+            <span className="cta_icon">
+              <IconMuseum icon="svgArrow" width={14.52} height={15.84} />
+            </span>
+          </span>
         </Link>
       </section>
     </main>
