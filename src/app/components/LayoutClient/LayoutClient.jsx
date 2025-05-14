@@ -3,6 +3,7 @@ import { useState } from "react";
 import Loader from "../Loader/Loader";
 import LogoHeader from "../LogoHeader/LogoHeader";
 import Noise from "../NoiseCanvas/NoiseCanvas";
+import AppearRef from "../AppearRef/AppearRef";
 
 export default function LayoutClient({ children }) {
   const [isLoading, setIsLoading] = useState(true);
@@ -13,7 +14,10 @@ export default function LayoutClient({ children }) {
       {!isLoading && (
         <>
           <Noise />
-          <LogoHeader />
+
+          <AppearRef delay={0.2}>
+            <LogoHeader />
+          </AppearRef>
           {children}
         </>
       )}
