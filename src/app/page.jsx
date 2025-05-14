@@ -96,10 +96,7 @@ export default function Home() {
     <main>
       <section className="home inside">
         <div className="narration">
-          <p className="narration_text">{narration}</p>
-          <div className="orb">
-            <canvas ref={canvasRef} className="webgl_orb" />
-          </div>
+          <div className="orb"></div>
         </div>
         <Link href={ctaLink || "#"} className="cta">
           {ctaLabel}

@@ -20,5 +20,9 @@
     "sass": "^1.85.1",
     "split-type": "^0.3.4",
     "three": "^0.176.0"
+  },
+  "devDependencies": {
+    "@types/node": "22.15.18",
+    "typescript": "5.8.3"
   }
 }
