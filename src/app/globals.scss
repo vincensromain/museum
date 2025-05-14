@@ -22,6 +22,26 @@ $gradient-variant-2: linear-gradient(
 );
 $gradient-variant-3: linear-gradient(135deg, #e0c3fc, #8ec5fc);
 
+@font-face {
+  font-family: "NHassGrotesk";
+  src: url("/fonts/NHaasGrotesk_Regular.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "NHassGrotesk";
+  src: url("/fonts/NHaasGrotesk_Bold.otf") format("opentype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+html {
+  font-family: "NHassGrotesk";
+}
+
 body {
   background: $gradient-variant-2;
   height: 100vh;
