@@ -1,91 +1,15 @@
 "use client";
-import { useRef, useLayoutEffect, useState } from "react";
+import React, { useRef, useLayoutEffect, useState } from "react";
 import * as THREE from "three";
-import GUI from "lil-gui";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import gsap from "gsap";
+import GUI from "lil-gui";
 import content from "../data/content.json";
-import IconMuseum from "../components/IconsMuseum/IconsMuseum";
-import Link from "next/link";
+
+import Orb from "../components/Orb/Orb";
+import Modal from "../components/Modal/Modal";
+
 import "./visite_musee.scss";
-
-// FakeGlowMaterial class
-class FakeGlowMaterial extends THREE.ShaderMaterial {
-  constructor(parameters = {}) {
-    super();
-
-    this.vertexShader = `
-      varying vec3 vPosition;
-      varying vec3 vNormal;
-
-      void main() {
-        vec4 modelPosition = modelMatrix * vec4(position, 1.0);
-        gl_Position = projectionMatrix * viewMatrix * modelPosition;
-        vec4 modelNormal = modelMatrix * vec4(normal, 0.0);
-        vPosition = modelPosition.xyz;
-        vNormal = modelNormal.xyz;
-      }
-    `;
-
-    this.fragmentShader = `
-      uniform vec3 glowColor;
-      uniform float falloff;
-      uniform float glowSharpness;
-      uniform float glowInternalRadius;
-      uniform float opacity;
-
-      varying vec3 vPosition;
-      varying vec3 vNormal;
-
-      void main() {
-        vec3 normal = normalize(vNormal);
-        if(!gl_FrontFacing)
-            normal *= -1.0;
-        vec3 viewDirection = normalize(cameraPosition - vPosition);
-        float fresnel = dot(viewDirection, normal);
-        fresnel = pow(fresnel, glowInternalRadius + 0.1);
-        float falloffFactor = smoothstep(0., falloff, fresnel);
-        float fakeGlow = fresnel;
-        fakeGlow += fresnel * glowSharpness;
-        fakeGlow *= falloffFactor;
-        gl_FragColor = vec4(clamp(glowColor * fresnel, 0., 1.0), clamp(fakeGlow, 0., opacity));
-      }
-    `;
-
-    this.uniforms = {
-      opacity: new THREE.Uniform(
-        parameters.opacity !== undefined ? parameters.opacity : 0.0
-      ),
-      glowInternalRadius: new THREE.Uniform(
-        parameters.glowInternalRadius !== undefined
-          ? parameters.glowInternalRadius
-          : 6.0
-      ),
-      glowSharpness: new THREE.Uniform(
-        parameters.glowSharpness !== undefined ? parameters.glowSharpness : 0.5
-      ),
-      falloff: new THREE.Uniform(
-        parameters.falloff !== undefined ? parameters.falloff : 0.1
-      ),
-      glowColor: new THREE.Uniform(
-        parameters.glowColor !== undefined
-          ? new THREE.Color(parameters.glowColor)
-          : new THREE.Color("#FFFF")
-      ),
-    };
-
-    this.setValues(parameters);
-    this.depthTest =
-      parameters.depthTest !== undefined ? parameters.depthTest : false;
-    this.blending =
-      parameters.blendMode !== undefined
-        ? parameters.blendMode
-        : THREE.AdditiveBlending;
-    this.transparent = true;
-    this.side =
-      parameters.side !== undefined ? parameters.side : THREE.DoubleSide;
-  }
-}
 
 export default function Visite_musee() {
   const canvasRef = useRef(null);
@@ -101,6 +25,46 @@ export default function Visite_musee() {
   const lastViewedOrbRef = useRef(0);
 
   const [showReturn, setShowReturn] = useState(false);
+
+  const glowParams = {
+    falloff: 0.1,
+    glowInternalRadius: 6.0,
+    glowSharpness: 0.5,
+    opacity: 1.0,
+    glowColor: "#EFFBF6",
+  };
+
+  const breatheOrb = (orb) => {
+    const tl = gsap.timeline({ repeat: -1, yoyo: true });
+    tl.to(orb.material.uniforms.glowInternalRadius, {
+      value: 4 + Math.random(),
+      duration: 1.1,
+      ease: "sine.inOut",
+    });
+  };
+
+  const activateOrb = (i) => {
+    const orb = pastillesRef.current[i];
+    const light = lightsRef.current[i];
+    const blueLight = blueLightsRef.current[i];
+
+    gsap.to(orb.material.uniforms.opacity, {
+      value: glowParams.opacity,
+      duration: 2,
+      ease: "sine.inOut",
+    });
+    gsap.to(light, {
+      intensity: 2,
+      duration: 2,
+      ease: "sine.inOut",
+    });
+    gsap.to(blueLight, {
+      intensity: 2,
+      duration: 2,
+      ease: "sine.inOut",
+    });
+    breatheOrb(orb);
+  };
 
   useLayoutEffect(() => {
     const canvas = canvasRef.current;
@@ -135,8 +99,6 @@ export default function Visite_musee() {
 
     // Renderer
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.setSize(sizes.width, sizes.height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
@@ -153,7 +115,7 @@ export default function Visite_musee() {
       });
     });
 
-    // Positions and parameters for orbs
+    // Positions for orbs
     const positions = [
       new THREE.Vector3(1.7, 0.3, 11),
       new THREE.Vector3(0.3, -1.1, 8),
@@ -162,28 +124,8 @@ export default function Visite_musee() {
       new THREE.Vector3(-2, 0.5, 1),
     ];
 
-    const glowParams = {
-      falloff: 0.1,
-      glowInternalRadius: 6.0,
-      glowSharpness: 0.5,
-      opacity: 1.0,
-      glowColor: "#FFFF",
-    };
-
-    const orbGeom = new THREE.SphereGeometry(0.3, 32, 32);
-
     positions.forEach((pos, i) => {
-      const glowMaterial = new FakeGlowMaterial({
-        falloff: glowParams.falloff,
-        glowInternalRadius: glowParams.glowInternalRadius,
-        glowSharpness: glowParams.glowSharpness,
-        opacity: 0.0,
-        glowColor: glowParams.glowColor,
-      });
-
-      const orb = new THREE.Mesh(orbGeom, glowMaterial);
-      orb.position.copy(pos);
-      scene.add(orb);
+      const orb = Orb({ position: pos, glowParams, scene });
       pastillesRef.current.push(orb);
 
       const light = new THREE.PointLight(
@@ -201,6 +143,9 @@ export default function Visite_musee() {
       orb.add(blueLight);
       blueLightsRef.current.push(blueLight);
     });
+
+    // Activate the first orb
+    activateOrb(0);
 
     // GUI
     const gui = new GUI();
@@ -244,39 +189,6 @@ export default function Visite_musee() {
         .add(blueLight, "intensity", 0, 10, 0.1)
         .name(`Blue Light ${i} Intensity`);
     });
-
-    const breatheOrb = (orb) => {
-      const tl = gsap.timeline({ repeat: -1, yoyo: true });
-      tl.to(orb.material.uniforms.glowInternalRadius, {
-        value: 4 + Math.random(),
-        duration: 1.1,
-        ease: "sine.inOut",
-      });
-    };
-
-    const activateOrb = (i) => {
-      const orb = pastillesRef.current[i];
-      const light = lightsRef.current[i];
-      const blueLight = blueLightsRef.current[i];
-      gsap.to(orb.material.uniforms.opacity, {
-        value: glowParams.opacity,
-        duration: 2,
-        ease: "sine.inOut",
-      });
-      gsap.to(light, {
-        intensity: 2,
-        duration: 2,
-        ease: "sine.inOut",
-      });
-      gsap.to(blueLight, {
-        intensity: 2,
-        duration: 2,
-        ease: "sine.inOut",
-      });
-      breatheOrb(orb);
-    };
-    activateOrbRef.current = activateOrb;
-    activateOrbRef.current(0);
 
     // Interaction and animation
     const raycaster = new THREE.Raycaster();
@@ -331,6 +243,9 @@ export default function Visite_musee() {
     };
     tick();
 
+    // Initialize activateOrbRef
+    activateOrbRef.current = activateOrb;
+
     // Cleanup
     return () => {
       window.removeEventListener("resize", onResize);
@@ -375,42 +290,12 @@ export default function Visite_musee() {
   return (
     <div className="visite_musee">
       <canvas ref={canvasRef} className="webgl" />
-      <div className={`modal ${showReturn ? "active" : ""}`}>
-        <div className="modal_content">
-          {content.artworks[lastViewedOrbRef.current] && (
-            <>
-              <div className="icon">
-                <IconMuseum
-                  className="svg_scan"
-                  icon="svgScan"
-                  width={56}
-                  height={56}
-                />
-                <IconMuseum
-                  icon={content.artworks[lastViewedOrbRef.current].icon}
-                  width={30}
-                  height={30}
-                />
-              </div>
-              <h2 className="artwork_name">
-                {content.artworks[lastViewedOrbRef.current].title}
-              </h2>
-              <p className="artwork_description">
-                {content.artworks[lastViewedOrbRef.current].description}
-              </p>
-              <div className="hypertext">
-                <Link
-                  href={content.artworks[lastViewedOrbRef.current].link}
-                  className="hypertext_link"
-                >
-                  Je n'ai pas accès à la puce NFC
-                </Link>
-              </div>
-            </>
-          )}
-          <button onClick={modalAppear}>Fermer</button>
-        </div>
-      </div>
+      <Modal
+        showReturn={showReturn}
+        content={content}
+        lastViewedOrbRef={lastViewedOrbRef}
+        modalAppear={modalAppear}
+      />
     </div>
   );
 }
