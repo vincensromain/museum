@@ -1,15 +1,91 @@
 "use client";
-
 import { useRef, useLayoutEffect, useState } from "react";
 import * as THREE from "three";
 import GUI from "lil-gui";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import gsap from "gsap";
 import content from "../data/content.json";
-
 import IconMuseum from "../components/IconsMuseum/IconsMuseum";
 import Link from "next/link";
 import "./visite_musee.scss";
+
+// FakeGlowMaterial class
+class FakeGlowMaterial extends THREE.ShaderMaterial {
+  constructor(parameters = {}) {
+    super();
+
+    this.vertexShader = `
+      varying vec3 vPosition;
+      varying vec3 vNormal;
+
+      void main() {
+        vec4 modelPosition = modelMatrix * vec4(position, 1.0);
+        gl_Position = projectionMatrix * viewMatrix * modelPosition;
+        vec4 modelNormal = modelMatrix * vec4(normal, 0.0);
+        vPosition = modelPosition.xyz;
+        vNormal = modelNormal.xyz;
+      }
+    `;
+
+    this.fragmentShader = `
+      uniform vec3 glowColor;
+      uniform float falloff;
+      uniform float glowSharpness;
+      uniform float glowInternalRadius;
+      uniform float opacity;
+
+      varying vec3 vPosition;
+      varying vec3 vNormal;
+
+      void main() {
+        vec3 normal = normalize(vNormal);
+        if(!gl_FrontFacing)
+            normal *= -1.0;
+        vec3 viewDirection = normalize(cameraPosition - vPosition);
+        float fresnel = dot(viewDirection, normal);
+        fresnel = pow(fresnel, glowInternalRadius + 0.1);
+        float falloffFactor = smoothstep(0., falloff, fresnel);
+        float fakeGlow = fresnel;
+        fakeGlow += fresnel * glowSharpness;
+        fakeGlow *= falloffFactor;
+        gl_FragColor = vec4(clamp(glowColor * fresnel, 0., 1.0), clamp(fakeGlow, 0., opacity));
+      }
+    `;
+
+    this.uniforms = {
+      opacity: new THREE.Uniform(
+        parameters.opacity !== undefined ? parameters.opacity : 0.0
+      ),
+      glowInternalRadius: new THREE.Uniform(
+        parameters.glowInternalRadius !== undefined
+          ? parameters.glowInternalRadius
+          : 6.0
+      ),
+      glowSharpness: new THREE.Uniform(
+        parameters.glowSharpness !== undefined ? parameters.glowSharpness : 0.5
+      ),
+      falloff: new THREE.Uniform(
+        parameters.falloff !== undefined ? parameters.falloff : 0.1
+      ),
+      glowColor: new THREE.Uniform(
+        parameters.glowColor !== undefined
+          ? new THREE.Color(parameters.glowColor)
+          : new THREE.Color("#FFFF")
+      ),
+    };
+
+    this.setValues(parameters);
+    this.depthTest =
+      parameters.depthTest !== undefined ? parameters.depthTest : false;
+    this.blending =
+      parameters.blendMode !== undefined
+        ? parameters.blendMode
+        : THREE.AdditiveBlending;
+    this.transparent = true;
+    this.side =
+      parameters.side !== undefined ? parameters.side : THREE.DoubleSide;
+  }
+}
 
 export default function Visite_musee() {
   const canvasRef = useRef(null);
@@ -20,6 +96,7 @@ export default function Visite_musee() {
   const isMovingRef = useRef(false);
   const pastillesRef = useRef([]);
   const lightsRef = useRef([]);
+  const blueLightsRef = useRef([]);
   const activateOrbRef = useRef(null);
   const lastViewedOrbRef = useRef(0);
 
@@ -29,9 +106,7 @@ export default function Visite_musee() {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    // —————————————————————————————
-    //   Scène et taille
-    // —————————————————————————————
+    // Scene and sizes
     const scene = new THREE.Scene();
     const sizes = { width: window.innerWidth, height: window.innerHeight };
     const onResize = () => {
@@ -44,9 +119,7 @@ export default function Visite_musee() {
     };
     window.addEventListener("resize", onResize);
 
-    // —————————————————————————————
-    //   Caméra
-    // —————————————————————————————
+    // Camera
     const camera = new THREE.PerspectiveCamera(
       75,
       sizes.width / sizes.height,
@@ -60,18 +133,14 @@ export default function Visite_musee() {
     initialCamPosRef.current = camera.position.clone();
     initialCamQuatRef.current = camera.quaternion.clone();
 
-    // —————————————————————————————
-    //   Renderer
-    // —————————————————————————————
+    // Renderer
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.setSize(sizes.width, sizes.height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
-    // —————————————————————————————
-    //   Chargement du modèle
-    // —————————————————————————————
+    // Load model
     const gltfLoader = new GLTFLoader();
     gltfLoader.load("/models/Musee/musee.glb", (gltf) => {
       const model = gltf.scene;
@@ -84,98 +153,132 @@ export default function Visite_musee() {
       });
     });
 
-    // —————————————————————————————
-    //   Pastilles + lumières
-    // —————————————————————————————
+    // Positions and parameters for orbs
     const positions = [
-      new THREE.Vector3(1.7, -1, 10.5),
+      new THREE.Vector3(1.7, 0.3, 11),
       new THREE.Vector3(0.3, -1.1, 8),
       new THREE.Vector3(-3.7, 0.5, 5),
       new THREE.Vector3(4, -1, 4),
       new THREE.Vector3(-2, 0.5, 1),
     ];
-    const params = {
-      intensity: 2,
-      emissiveIntensity: 1.5,
-      distance: 5,
-      decay: 2,
-      color: "#ffffff",
+
+    const glowParams = {
+      falloff: 0.1,
+      glowInternalRadius: 6.0,
+      glowSharpness: 0.5,
+      opacity: 1.0,
+      glowColor: "#FFFF",
     };
 
-    positions.forEach((pos) => {
-      const color = new THREE.Color(0xffffff);
-      const geom = new THREE.SphereGeometry(0.3, 32, 32);
-      const mat = new THREE.MeshStandardMaterial({
-        color,
-        emissive: color,
-        emissiveIntensity: 0,
-        roughness: 0.3,
-        metalness: 0.1,
+    const orbGeom = new THREE.SphereGeometry(0.3, 32, 32);
+
+    positions.forEach((pos, i) => {
+      const glowMaterial = new FakeGlowMaterial({
+        falloff: glowParams.falloff,
+        glowInternalRadius: glowParams.glowInternalRadius,
+        glowSharpness: glowParams.glowSharpness,
+        opacity: 0.0,
+        glowColor: glowParams.glowColor,
       });
-      const orb = new THREE.Mesh(geom, mat);
+
+      const orb = new THREE.Mesh(orbGeom, glowMaterial);
       orb.position.copy(pos);
       scene.add(orb);
       pastillesRef.current.push(orb);
 
-      // light
       const light = new THREE.PointLight(
-        color,
+        glowParams.glowColor,
         0,
-        params.distance,
-        params.decay
+        5 * 0.8,
+        2 * 2
       );
-
-      light.position.copy(pos);
-      scene.add(light);
+      light.position.set(0, 0, 0);
+      orb.add(light);
       lightsRef.current.push(light);
+
+      const blueLight = new THREE.PointLight(0x07b2c5, 0, 5 * 1.1, 2 / 2);
+      blueLight.position.set(0, 0, 0);
+      orb.add(blueLight);
+      blueLightsRef.current.push(blueLight);
     });
 
-    // —————————————————————————————
-    //   GUI
-    // —————————————————————————————
+    // GUI
     const gui = new GUI();
-    const folder = gui.addFolder("Lights");
-    folder
-      .add(params, "intensity", 0, 10, 0.1)
-      .onChange((v) => lightsRef.current.forEach((l) => (l.intensity = v)));
-    folder
-      .add(params, "emissiveIntensity", 0, 5, 0.1)
-      .onChange((v) =>
-        pastillesRef.current.forEach((o) => (o.material.emissiveIntensity = v))
-      );
-    folder
-      .add(params, "distance", 0, 50, 1)
-      .onChange((v) => lightsRef.current.forEach((l) => (l.distance = v)));
-    folder
-      .add(params, "decay", 0, 5, 0.1)
-      .onChange((v) => lightsRef.current.forEach((l) => (l.decay = v)));
-    folder.addColor(params, "color").onChange((hex) => {
-      lightsRef.current.forEach((l) => l.color.set(hex));
-      pastillesRef.current.forEach((o) => {
-        o.material.color.set(hex);
-        o.material.emissive.set(hex);
+    const glowFolder = gui.addFolder("Glow Parameters");
+    glowFolder.add(glowParams, "falloff", 0, 1, 0.01).onChange((v) => {
+      pastillesRef.current.forEach((orb) => {
+        orb.material.uniforms.falloff.value = v;
       });
     });
-    folder.open();
+    glowFolder
+      .add(glowParams, "glowInternalRadius", 4, 5, 0.1)
+      .onChange((v) => {
+        pastillesRef.current.forEach((orb) => {
+          orb.material.uniforms.glowInternalRadius.value = v;
+        });
+      });
+    glowFolder.add(glowParams, "glowSharpness", 0, 1, 0.01).onChange((v) => {
+      pastillesRef.current.forEach((orb) => {
+        orb.material.uniforms.glowSharpness.value = v;
+      });
+    });
+    glowFolder.add(glowParams, "opacity", 0, 1, 0.01).onChange((v) => {
+      pastillesRef.current.forEach((orb) => {
+        orb.material.uniforms.opacity.value = v;
+      });
+    });
+    glowFolder.addColor(glowParams, "glowColor").onChange((v) => {
+      pastillesRef.current.forEach((orb) => {
+        orb.material.uniforms.glowColor.value.set(v);
+      });
+    });
+
+    const lightFolder = gui.addFolder("Light Parameters");
+    lightsRef.current.forEach((light, i) => {
+      lightFolder
+        .add(light, "intensity", 0, 10, 0.1)
+        .name(`Light ${i} Intensity`);
+    });
+    blueLightsRef.current.forEach((blueLight, i) => {
+      lightFolder
+        .add(blueLight, "intensity", 0, 10, 0.1)
+        .name(`Blue Light ${i} Intensity`);
+    });
+
+    const breatheOrb = (orb) => {
+      const tl = gsap.timeline({ repeat: -1, yoyo: true });
+      tl.to(orb.material.uniforms.glowInternalRadius, {
+        value: 4 + Math.random(),
+        duration: 1.1,
+        ease: "sine.inOut",
+      });
+    };
 
     const activateOrb = (i) => {
       const orb = pastillesRef.current[i];
       const light = lightsRef.current[i];
-      orb.material.emissiveIntensity = params.emissiveIntensity;
-      gsap.to(orb.material, {
-        emissiveIntensity: params.emissiveIntensity + 0.5,
+      const blueLight = blueLightsRef.current[i];
+      gsap.to(orb.material.uniforms.opacity, {
+        value: glowParams.opacity,
         duration: 2,
         ease: "sine.inOut",
       });
       gsap.to(light, {
-        intensity: params.intensity,
+        intensity: 2,
         duration: 2,
         ease: "sine.inOut",
       });
+      gsap.to(blueLight, {
+        intensity: 2,
+        duration: 2,
+        ease: "sine.inOut",
+      });
+      breatheOrb(orb);
     };
     activateOrbRef.current = activateOrb;
     activateOrbRef.current(0);
 
+    // Interaction and animation
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
     const onClickCanvas = (e) => {
@@ -215,7 +318,7 @@ export default function Visite_musee() {
           ease: "power2.inOut",
           onComplete: () => {
             setShowReturn(true);
-            lastViewedOrbRef.current = clickedOrbIndex; // Update the last viewed orb
+            lastViewedOrbRef.current = clickedOrbIndex;
           },
         });
       }
@@ -277,7 +380,12 @@ export default function Visite_musee() {
           {content.artworks[lastViewedOrbRef.current] && (
             <>
               <div className="icon">
-                <IconMuseum icon="svgScan" width={56} height={56} />
+                <IconMuseum
+                  className="svg_scan"
+                  icon="svgScan"
+                  width={56}
+                  height={56}
+                />
                 <IconMuseum
                   icon={content.artworks[lastViewedOrbRef.current].icon}
                   width={30}

@@ -29,10 +29,18 @@
       width: calc(289px - 50px);
       height: calc(345px - 72px);
       padding: 26px 25px 46px 25px;
-      background: #182628e8;
-
-      backdrop-filter: blur(40px);
       border-radius: 30px;
+      background: linear-gradient(-22deg, #082123, #061417a4);
+      opacity: 80%;
+
+      .icon {
+        display: flex;
+        justify-content: space-between;
+
+        .svg_scan {
+          background-color: #182628;
+        }
+      }
     }
   }
 

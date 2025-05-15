@@ -28,11 +28,8 @@ export default function Home() {
 
     // 👉 timeline de rebond assignée à une variable
     const hintTl = gsap
-      .timeline({ delay: 0.8 })
-      .to(icon, { x: 10, duration: 0.8, ease: "power2.out" })
-      .to(icon, { x: 0, duration: 0.4, ease: "power2.inOut" })
-      .to({}, { duration: 0.5 })
-      .to(icon, { x: 10, duration: 0.8, ease: "power2.out" })
+      .timeline({ delay: 0.5, repeat: -1, repeatDelay: 1 })
+      .to(icon, { x: 10, duration: 0.4, ease: "power2.out" })
       .to(icon, { x: 0, duration: 0.4, ease: "power2.inOut" });
 
     const iconWidth = icon.offsetWidth;
@@ -44,7 +41,6 @@ export default function Home() {
       type: "x",
       bounds: { minX: 0, maxX },
       inertia: true,
-      // ⛔ dès qu'on appuie, on tue la timeline
       onPress: function () {
         hintTl.kill();
       },

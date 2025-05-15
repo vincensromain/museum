@@ -22,6 +22,15 @@ $gradient-variant-2: linear-gradient(
 );
 $gradient-variant-3: linear-gradient(135deg, #e0c3fc, #8ec5fc);
 
+@keyframes gradientShift {
+  0% {
+    background-position: 0% 90%;
+  }
+  100% {
+    background-position: 0% 80%;
+  }
+}
+
 @font-face {
   font-family: "NHassGrotesk";
   src: url("/fonts/NHaasGrotesk_Regular.otf") format("opentype");
@@ -44,7 +53,10 @@ html {
 
 body {
   background: $gradient-variant-2;
-  height: 100vh;
+  background-size: 100% 120%;
+  background-position: 0% 30%;
+  animation: gradientShift 2.1s ease-in-out infinite alternate;
+  height: 100dvh;
   overflow: hidden;
 }
 

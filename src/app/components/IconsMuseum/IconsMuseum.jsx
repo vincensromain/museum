@@ -44,8 +44,8 @@ const IconMuseum = ({ icon, ...props }) => {
     ),
     svgDino1: (
       <svg
-        width="209"
-        height="209"
+        width="53"
+        height="53"
         viewBox="0 0 209 209"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
@@ -55,8 +55,8 @@ const IconMuseum = ({ icon, ...props }) => {
     ),
     svgDino2: (
       <svg
-        width="209"
-        height="209"
+        width="53"
+        height="53"
         viewBox="0 0 209 209"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
@@ -66,8 +66,8 @@ const IconMuseum = ({ icon, ...props }) => {
     ),
     svgDino3: (
       <svg
-        width="209"
-        height="209"
+        width="53"
+        height="53"
         viewBox="0 0 209 209"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
