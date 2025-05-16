@@ -1,0 +1,45 @@
+$gradient-variant-1: linear-gradient(
+  to bottom,
+  #011a1e,
+  #22424c,
+  #00818f,
+  #49a1aa
+);
+
+.vestige {
+  height: 100dvh;
+  width: 100vw;
+  background: $gradient-variant-1;
+  position: relative;
+
+  .go_back {
+    position: absolute;
+    top: 33px;
+    left: 47px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    cursor: pointer;
+
+    .go_back_text {
+      font-size: 16px;
+    }
+  }
+
+  .svg_drag {
+    position: absolute;
+    left: 50%;
+    bottom: 30%;
+    transform: translateX(-50%);
+  }
+
+  .naration_text {
+    position: absolute;
+    bottom: 10%;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    justify-content: space-between;
+    width: calc(100vw - 64px);
+  }
+}

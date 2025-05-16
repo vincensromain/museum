@@ -87,12 +87,13 @@ export default function NoiseCanvas() {
 
   return (
     <canvas
+      className="noise_canvas"
       ref={canvasRef}
       style={{
         position: "fixed",
         top: 0,
         left: 0,
-        zIndex: -1,
+        zIndex: 2,
         width: "100vw",
         height: "100vh",
         pointerEvents: "none",
