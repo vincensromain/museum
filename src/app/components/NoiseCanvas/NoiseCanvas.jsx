@@ -13,7 +13,10 @@ export default function NoiseCanvas() {
 
   useEffect(() => {
     const canvas = canvasRef.current;
+    if (!canvas) return;
+
     const ctx = canvas.getContext("2d");
+    if (!ctx) return;
 
     const resize = () => {
       canvas.width = window.innerWidth * window.devicePixelRatio;
@@ -26,7 +29,7 @@ export default function NoiseCanvas() {
       constructor(x, y) {
         this.x = x;
         this.y = y;
-        this.size = pixelSizes[Math.floor(Math.random() * pixelSizes.length)]; // taille aléatoire
+        this.size = pixelSizes[Math.floor(Math.random() * pixelSizes.length)];
         this.alpha = 0;
         this.phase = "fade-in";
       }
@@ -52,7 +55,7 @@ export default function NoiseCanvas() {
 
       draw(ctx) {
         ctx.fillStyle = `rgba(255, 255, 255, ${this.alpha})`;
-        ctx.fillRect(this.x, this.y, this.size, this.size); // taille personnalisée
+        ctx.fillRect(this.x, this.y, this.size, this.size);
       }
     }
 
@@ -82,7 +85,9 @@ export default function NoiseCanvas() {
     window.addEventListener("resize", resize);
     loop();
 
-    return () => window.removeEventListener("resize", resize);
+    return () => {
+      window.removeEventListener("resize", resize);
+    };
   }, []);
 
   return (
