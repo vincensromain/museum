@@ -104,7 +104,7 @@ export default function Visite_musee() {
 
     // Load model
     const gltfLoader = new GLTFLoader();
-    gltfLoader.load("/models/Musee/musee.glb", (gltf) => {
+    gltfLoader.load("/models/Musee/musee_old.glb", (gltf) => {
       const model = gltf.scene;
       const box = new THREE.Box3().setFromObject(model);
       const center = box.getCenter(new THREE.Vector3());

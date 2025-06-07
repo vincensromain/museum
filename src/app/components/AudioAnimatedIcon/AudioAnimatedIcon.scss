@@ -1,0 +1,13 @@
+.audio_bars_wrapper {
+  display: flex;
+  align-items: flex-end;
+  height: 30px;
+  gap: 3px;
+}
+
+.audio_bar {
+  width: 3px;
+  height: 10px;
+  background: #fcfcfc;
+  border-radius: 2px;
+}

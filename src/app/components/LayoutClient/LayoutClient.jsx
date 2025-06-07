@@ -4,6 +4,7 @@ import { useRef, useEffect } from "react";
 import LogoHeader from "../LogoHeader/LogoHeader";
 import Noise from "../NoiseCanvas/NoiseCanvas";
 import AppearRef from "../AppearRef/AppearRef";
+import AudioToggleButton from "../AudioToggle/AudioToggle";
 
 export default function LayoutClient({ children }) {
   const audioRef = useRef(null);
@@ -34,7 +35,6 @@ export default function LayoutClient({ children }) {
         });
     };
 
-    // Essayer de jouer l'audio automatiquement
     playAudio();
 
     // 4) Sur le premier clic utilisateur, on enlève le muet et on joue
@@ -62,7 +62,6 @@ export default function LayoutClient({ children }) {
 
   return (
     <>
-      {/* audio totalement caché, autoplay muet puis unmuté au premier clic */}
       <audio
         ref={audioRef}
         src="/audios/audio.wav"
@@ -80,6 +79,8 @@ export default function LayoutClient({ children }) {
       </AppearRef>
 
       {children}
+
+      <AudioToggleButton audioRef={audioRef} />
     </>
   );
 }
