@@ -1,5 +1,6 @@
 "use client";
 import React, { useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { gsap } from "gsap";
 import "./Vestige_1.scss";
 import IconMuseum from "../components/IconsMuseum/IconsMuseum";
@@ -9,6 +10,7 @@ import Skin from "../components/Skin/Skin";
 
 export default function Vestige_1() {
   const dragRef = useRef(null);
+  const router = useRouter();
 
   useEffect(() => {
     gsap.fromTo(
@@ -24,9 +26,14 @@ export default function Vestige_1() {
     );
   }, []);
 
+  const handleReturn = () => {
+    localStorage.setItem("museumProgress", "2"); // orbe 2 débloqué
+    router.push("/visite_musee");
+  };
+
   return (
     <section className="vestige">
-      <div className="go_back">
+      <div className="go_back" onClick={handleReturn}>
         <IconMuseum icon="svgArrowBack" />
         <span className="go_back_text">Retour</span>
       </div>

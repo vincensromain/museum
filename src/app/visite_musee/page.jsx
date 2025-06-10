@@ -70,7 +70,6 @@ export default function Visite_musee() {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    // Scene and sizes
     const scene = new THREE.Scene();
     const sizes = { width: window.innerWidth, height: window.innerHeight };
     const onResize = () => {
@@ -83,7 +82,6 @@ export default function Visite_musee() {
     };
     window.addEventListener("resize", onResize);
 
-    // Camera
     const camera = new THREE.PerspectiveCamera(
       75,
       sizes.width / sizes.height,
@@ -97,12 +95,10 @@ export default function Visite_musee() {
     initialCamPosRef.current = camera.position.clone();
     initialCamQuatRef.current = camera.quaternion.clone();
 
-    // Renderer
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
     renderer.setSize(sizes.width, sizes.height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
-    // Load model
     const gltfLoader = new GLTFLoader();
     gltfLoader.load("/models/Musee/musee_old.glb", (gltf) => {
       const model = gltf.scene;
@@ -115,7 +111,6 @@ export default function Visite_musee() {
       });
     });
 
-    // Positions for orbs
     const positions = [
       new THREE.Vector3(1.7, 0.3, 11),
       new THREE.Vector3(0.3, -1.1, 8),
@@ -144,10 +139,14 @@ export default function Visite_musee() {
       blueLightsRef.current.push(blueLight);
     });
 
-    // Activate the first orb
-    activateOrb(0);
+    // 🔁 Progression sauvegardée (par défaut : 1 orbe)
+    let savedProgress = parseInt(localStorage.getItem("museumProgress") || "1");
+    savedProgress = Math.max(1, Math.min(savedProgress, positions.length));
+    currentIndexRef.current = savedProgress - 1;
+    for (let i = 0; i < savedProgress; i++) {
+      activateOrb(i);
+    }
 
-    // GUI
     const gui = new GUI();
     const glowFolder = gui.addFolder("Glow Parameters");
     glowFolder.add(glowParams, "falloff", 0, 1, 0.01).onChange((v) => {
@@ -190,7 +189,6 @@ export default function Visite_musee() {
         .name(`Blue Light ${i} Intensity`);
     });
 
-    // Interaction and animation
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
     const onClickCanvas = (e) => {
@@ -243,10 +241,8 @@ export default function Visite_musee() {
     };
     tick();
 
-    // Initialize activateOrbRef
     activateOrbRef.current = activateOrb;
 
-    // Cleanup
     return () => {
       window.removeEventListener("resize", onResize);
       canvas.removeEventListener("click", onClickCanvas);
@@ -276,12 +272,7 @@ export default function Visite_musee() {
       duration: 1.5,
       ease: "power2.inOut",
       onComplete: () => {
-        if (lastViewedOrbRef.current === currentIndexRef.current) {
-          currentIndexRef.current += 1;
-          if (currentIndexRef.current < pastillesRef.current.length) {
-            activateOrbRef.current(currentIndexRef.current);
-          }
-        }
+        // Ne débloque rien automatiquement — on garde la progression actuelle
         isMovingRef.current = false;
       },
     });

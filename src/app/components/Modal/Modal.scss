@@ -21,6 +21,7 @@
     border-radius: 30px;
     background: linear-gradient(-22deg, #082123, #061417a4);
     opacity: 80%;
+    position: relative;
 
     .icon {
       display: flex;
@@ -37,6 +38,12 @@
         position: absolute;
         right: -25px;
       }
+    }
+
+    .cross {
+      position: absolute;
+      top: 30px;
+      right: 30px;
     }
 
     .artwork_content {
