@@ -44,6 +44,14 @@
       position: absolute;
       top: 30px;
       right: 30px;
+      background-color: rgba(0, 0, 0, 0.42);
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 5px;
     }
 
     .artwork_content {
