@@ -15,7 +15,7 @@ export default function Home() {
   useEffect(() => {
     if (!canvasRef.current) return;
 
-    // ─── SCÈNE, CAMÉRA, RENDERER ───
+    // Scene, Camera, Renderer
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(
       75,
@@ -35,7 +35,7 @@ export default function Home() {
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1;
 
-    // ─── CONTROLS ───
+    // Controls
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
@@ -43,14 +43,14 @@ export default function Home() {
     controls.enablePan = false;
     controls.target.set(0, 0, 0);
 
-    // ─── GUI ───
+    // GUI
     const gui = new GUI();
     const camFolder = gui.addFolder("Camera");
     camFolder.add(camera.position, "x", -50, 50).name("Pos X");
     camFolder.add(camera.position, "y", -50, 50).name("Pos Y");
     camFolder.add(camera.position, "z", -50, 50).name("Pos Z");
 
-    // ─── Ambient Light ───
+    // Ambient Light
     const ambient = new THREE.AmbientLight(0xffffff, 0.2);
     scene.add(ambient);
     const ambFolder = gui.addFolder("Ambient");
@@ -67,7 +67,7 @@ export default function Home() {
       .name("Intensity")
       .onChange((v) => (ambient.intensity = v));
 
-    // ─── Définition des lumières ───
+    // Light Definitions
     const lightDefs = {
       point_1: {
         color: 0x07b2c5,
@@ -125,33 +125,32 @@ export default function Home() {
       },
     };
 
-    // Stocke pivots pour rotation
     const animatedDiamonds = [];
+    const clickableObjects = {};
+    const pointLights = {};
 
     Object.entries(lightDefs).forEach(([name, def]) => {
-      // ─ PointLight ─
       const light = new THREE.PointLight(
         def.color,
         def.intensity,
         def.distance
       );
       light.position.set(...def.position);
-      scene.add(light);
 
-      // Définir l'état initial des lights
       const isPoint1 = name === "point_1";
       const homeLight = name === "home";
       const basicLight1 = name === "basicLight_1";
       const basicLight2 = name === "basicLight_2";
       light.visible = isPoint1 || homeLight || basicLight1 || basicLight2;
+      scene.add(light);
+      pointLights[name] = light;
 
-      // GUI folder
       const folder = gui.addFolder(name);
       const settings = {
         color: def.color,
         intensity: def.intensity,
         distance: def.distance,
-        lightOn: isPoint1,
+        lightOn: light.visible,
         animate: isPoint1,
       };
       folder
@@ -171,7 +170,6 @@ export default function Home() {
         .name("Light On/Off")
         .onChange((v) => (light.visible = v));
 
-      // Ne pas créer de wireframe pour home/basicLight
       const skipWire = ["home", "basicLight_1", "basicLight_2"].includes(name);
       if (!skipWire) {
         const size = 1;
@@ -191,35 +189,124 @@ export default function Home() {
         diamond.position.set(0, -size, 0);
         pivot.add(diamond);
 
-        // GSAP scale animation
-        const tween = gsap.fromTo(
+        gsap.fromTo(
           diamond.scale,
-          { x: 0, y: 0, z: 0 },
-          {
+          { x: 0.3, y: 0.3, z: 0.3 },
+          { x: 0.5, y: 0.5, z: 0.5, duration: 1.3, ease: "power3.inOut" }
+        );
+
+        animatedDiamonds.push(pivot);
+        clickableObjects[name] = diamond;
+
+        if (settings.animate) {
+          const tween = gsap.to(diamond.scale, {
             x: 0.5,
             y: 0.5,
             z: 0.5,
             duration: 1.3,
             ease: "power3.inOut",
-            paused: !settings.animate,
-          }
-        );
-        folder
-          .add(settings, "animate")
-          .name("Animate Diamond")
-          .onChange((v) => {
-            if (v) tween.restart();
-            else {
-              tween.pause();
-              diamond.scale.set(1, 1, 1);
-            }
+            repeat: -1,
+            yoyo: true,
           });
-
-        animatedDiamonds.push(pivot);
+          folder
+            .add(settings, "animate")
+            .name("Animate Diamond")
+            .onChange((v) => {
+              v ? tween.play() : tween.pause();
+            });
+        }
       }
     });
 
-    // ─── Chargement du modèle glTF ───
+    // Interaction on click
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+    renderer.domElement.addEventListener("click", (event) => {
+      mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+      mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+      raycaster.setFromCamera(mouse, camera);
+      const hits = raycaster.intersectObjects(
+        Object.values(clickableObjects),
+        true
+      );
+      if (hits.length > 0) {
+        const clickedObject = hits[0].object;
+        const name = Object.entries(clickableObjects).find(
+          ([, obj]) => obj === clickedObject
+        )?.[0];
+        if (name === "point_1") goToPoint2();
+      }
+    });
+
+    // Checkpoints and final positions for movement
+    const checkpoints = [
+      new THREE.Vector3(0.02, 100.7, 2.62),
+      //   new THREE.Vector3(0, 4.7, 4),
+      //   new THREE.Vector3(8, 4.7, 3),
+      //   new THREE.Vector3(8, 4.7, -11),
+    ];
+    const endPos = new THREE.Vector3(...lightDefs.point_2.position).add(
+      new THREE.Vector3(0, 1, 0)
+    );
+
+    function goToPoint2() {
+      const startPos = camera.position.clone();
+      const localCurve = new THREE.CatmullRomCurve3([
+        startPos,
+        ...checkpoints,
+        endPos,
+      ]);
+
+      const points = localCurve.getPoints(50);
+      const splineCurve = new THREE.CatmullRomCurve3(points);
+
+      const param = { t: 0 };
+      gsap.to(param, {
+        t: 1,
+        duration: 5,
+        ease: "power3.inOut",
+        onUpdate: () => {
+          const p = splineCurve.getPoint(param.t);
+          camera.position.copy(p);
+
+          const tangent = splineCurve.getTangent(param.t).normalize();
+          controls.target.copy(p.clone().add(tangent));
+          controls.update();
+        },
+        onComplete: () => {
+          pointLights.point_2.visible = true;
+        },
+      });
+    }
+
+    // Initial movement to point_1 after 2 seconds
+    const point1Pos = new THREE.Vector3(...lightDefs.point_1.position);
+    const camTargetPos = {
+      x: point1Pos.x,
+      y: point1Pos.y + 2,
+      z: point1Pos.z + 4,
+    };
+    gsap.to(camera.position, {
+      x: camTargetPos.x,
+      y: camTargetPos.y,
+      z: camTargetPos.z,
+      duration: 2,
+      delay: 2,
+      ease: "power3.inOut",
+      onUpdate: () => {
+        controls.target.copy(point1Pos);
+      },
+    });
+    gsap.to(controls.target, {
+      x: point1Pos.x,
+      y: point1Pos.y,
+      z: point1Pos.z,
+      duration: 2,
+      delay: 2,
+      ease: "power3.inOut",
+    });
+
+    // Load the glTF model and start the animation loop
     new GLTFLoader().load(
       "/models/Musee/scene_nolight.gltf",
       (gltf) => scene.add(gltf.scene),
@@ -227,7 +314,6 @@ export default function Home() {
       console.error
     );
 
-    // ─── Boucle d’animation ───
     function animate() {
       requestAnimationFrame(animate);
       animatedDiamonds.forEach((pivot) => {
@@ -238,7 +324,7 @@ export default function Home() {
     }
     animate();
 
-    // ─── Resize ───
+    // Handle window resize
     window.addEventListener("resize", () => {
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
