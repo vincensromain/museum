@@ -1,0 +1,53 @@
+$gradient-variant-1: linear-gradient(
+  to bottom,
+  #011a1e,
+  #22424c,
+  #00818f,
+  #49a1aa
+);
+
+.vestige {
+  height: 100dvh;
+  width: 100vw;
+  background: $gradient-variant-1;
+  position: relative;
+
+  .go_back {
+    position: absolute;
+    top: 33px;
+    left: 47px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    cursor: pointer;
+    z-index: 999;
+
+    .go_back_text {
+      font-size: 16px;
+      text-decoration: none;
+    }
+  }
+
+  .svg_drag {
+    position: absolute;
+    left: 50%;
+    bottom: 30%;
+    transform: translateX(-50%);
+  }
+
+  .naration_text {
+    position: absolute;
+    bottom: 10%;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: calc(100vw - 64px);
+  }
+}
+
+.model_canvas {
+  position: absolute;
+  z-index: 99;
+}

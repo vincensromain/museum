@@ -9,40 +9,47 @@
   },
 
   "artworks": [
-      {
-        "id": 0,
-        "icon": "svgDino1",
-        "title": "Squelette de dinosaure",
-        "description": "Borem ipsum dolor sit amet, consectetur adipiscing elit. Nunc vulputate libero et velit interdum, ac aliquet odio mattis.",
-        "link": "./vestige_1"
-      },
-      {
-        "id": 1,
-        "icon": "svgDino2",
-        "title": "Crâne kjkjekljrlkjerljh",
-        "description": "Traces d'une époque lointaine.",
-        "link": "./vestige_2"
-      },
+    {
+      "id": 0,
+      "icon": "svgDino1",
+      "title": "Scannez pour réveiller les secrets enfouis des ammonites",
+      "description": "Approchez votre smartphone de la pastille NFC pour révéler l’histoire de ce fossile.",
+      "link": "./vestige_1"
+    },
+    {
+      "id": 1,
+      "icon": "svgDino2",
+      "title": "Scannez pour suivre l’écho d’un géant des mers",
+      "description": "Approchez votre smartphone de la pastille NFC pour révéler l’histoire de ce fossile.",
+      "link": "./vestige_2"
+    },
       {
         "id": 2,
         "icon": "svgDino3",
-        "title": "Fémur géant",
-        "description": "Un os imposant issu d'un géant disparu.",
+        "title": "Scannez pour croiser la trace d’un colosse végétal",
+        "description": "Approchez votre smartphone de la pastille NFC pour révéler l’histoire de ce fossile.",
         "link": "./vestige_3"
       },
       {
         "id": 3,
         "icon": "svgDino4",
-        "title": "Œuf fossilisé",
-        "description": "Preuve d'une reproduction ancienne.",
+        "title": "Scannez pour explorer le territoire perdu du Rhabdodon",
+        "description": "Approchez votre smartphone de la pastille NFC pour révéler l’histoire de ce fossile.",
         "link": "./vestige_4"
       },
       {
         "id": 4,
         "icon": "svgDino5",
-        "title": "Griffes fossilisées",
-        "description": "Outils de chasse figés dans le temps.",
+        "title": "Scannez pour croiser la route du prédateur du Var",
+        "description": "Approchez votre smartphone de la pastille NFC pour révéler l’histoire de ce fossile.",
         "link": "./vestige_5"
+      },
+      {
+        "id": 5,
+        "icon": "svgDino6",
+        "title": "Scannez pour rencontrer un reptile volant du passé",
+        "description": "Approchez votre smartphone de la pastille NFC pour révéler l’histoire de ce fossile.",
+        "link": "./vestige_6"
       }
     ]
   

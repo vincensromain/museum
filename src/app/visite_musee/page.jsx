@@ -272,7 +272,6 @@ export default function Visite_musee() {
       duration: 1.5,
       ease: "power2.inOut",
       onComplete: () => {
-        // Ne débloque rien automatiquement — on garde la progression actuelle
         isMovingRef.current = false;
       },
     });

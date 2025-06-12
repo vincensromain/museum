@@ -203,8 +203,8 @@ export default function Home() {
             x: 0.5,
             y: 0.5,
             z: 0.5,
-            duration: 1.3,
-            ease: "power3.inOut",
+            duration: 0.8,
+            ease: "power3",
             repeat: -1,
             yoyo: true,
           });
