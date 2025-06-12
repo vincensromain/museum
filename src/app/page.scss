@@ -20,14 +20,10 @@
       width: 200px;
       height: 200px;
       background-color: transparent;
-      position: relative;
-
-      .webgl_orb {
-        width: 200px;
-        height: 200px;
-        position: absolute;
-        background-color: transparent;
-      }
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      top: 280px;
     }
   }
 
