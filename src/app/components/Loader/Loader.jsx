@@ -3,12 +3,13 @@ import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import "./Loader.scss";
 
-export default function Loader({ setIsLoading }) {
+export default function Loader({ setIsLoading = () => {} }) {
   const loaderRef = useRef(null);
   const textRef = useRef(null);
   const totalPaths = 9;
   const minDuration = 1;
   const [animationComplete, setAnimationComplete] = useState(false);
+  const [textVisible, setTextVisible] = useState(false);
 
   useEffect(() => {
     const el = loaderRef.current;
@@ -25,8 +26,14 @@ export default function Loader({ setIsLoading }) {
 
       const timeline = gsap.timeline({
         onComplete: () => {
+          gsap.to(textRef.current, {
+            opacity: 1,
+            duration: 1,
+            onComplete: () => {
+              setTextVisible(true);
+            },
+          });
           setAnimationComplete(true);
-          gsap.to(textRef.current, { opacity: 1, duration: 1 });
         },
       });
 
@@ -52,7 +59,7 @@ export default function Loader({ setIsLoading }) {
   }, []);
 
   const handleClick = () => {
-    if (!animationComplete) return;
+    if (!textVisible) return;
 
     const el = loaderRef.current;
     gsap.to(el, {
@@ -71,7 +78,7 @@ export default function Loader({ setIsLoading }) {
       className="loader"
       ref={loaderRef}
       onClick={handleClick}
-      style={{ cursor: animationComplete ? "pointer" : "default" }}
+      style={{ cursor: textVisible ? "pointer" : "default" }}
     >
       <svg
         width="116"
