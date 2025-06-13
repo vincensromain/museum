@@ -1,12 +1,15 @@
 "use client";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import "./Loader.scss";
 
 export default function Loader({ setIsLoading }) {
   const loaderRef = useRef(null);
+  const textRef = useRef(null);
   const totalPaths = 9;
   const minDuration = 1;
+  const [animationComplete, setAnimationComplete] = useState(false);
+
   useEffect(() => {
     const el = loaderRef.current;
     for (let i = 1; i <= totalPaths; i++) {
@@ -22,15 +25,8 @@ export default function Loader({ setIsLoading }) {
 
       const timeline = gsap.timeline({
         onComplete: () => {
-          gsap.to(el, {
-            opacity: 0,
-            duration: 0.5,
-            ease: "power2.inOut",
-            onComplete: () => {
-              el.style.display = "none";
-              setIsLoading(false);
-            },
-          });
+          setAnimationComplete(true);
+          gsap.to(textRef.current, { opacity: 1, duration: 1 });
         },
       });
 
@@ -53,10 +49,30 @@ export default function Loader({ setIsLoading }) {
       window.addEventListener("load", onReady);
       return () => window.removeEventListener("load", onReady);
     }
-  }, [setIsLoading]);
+  }, []);
+
+  const handleClick = () => {
+    if (!animationComplete) return;
+
+    const el = loaderRef.current;
+    gsap.to(el, {
+      opacity: 0,
+      duration: 0.5,
+      ease: "power2.inOut",
+      onComplete: () => {
+        el.style.display = "none";
+        setIsLoading(false);
+      },
+    });
+  };
 
   return (
-    <div className="loader" ref={loaderRef}>
+    <div
+      className="loader"
+      ref={loaderRef}
+      onClick={handleClick}
+      style={{ cursor: animationComplete ? "pointer" : "default" }}
+    >
       <svg
         width="116"
         height="98"
@@ -126,6 +142,9 @@ export default function Loader({ setIsLoading }) {
           </clipPath>
         </defs>
       </svg>
+      <p ref={textRef} className="loader-text" style={{ opacity: 0 }}>
+        Cliquez n'importe où pour commencer
+      </p>
     </div>
   );
 }

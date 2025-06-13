@@ -5,6 +5,7 @@ import LogoHeader from "../LogoHeader/LogoHeader";
 import Noise from "../NoiseCanvas/NoiseCanvas";
 import AppearRef from "../AppearRef/AppearRef";
 import AudioToggleButton from "../AudioToggle/AudioToggle";
+import Loader from "../Loader/Loader";
 
 export default function LayoutClient({ children }) {
   const audioRef = useRef(null);
@@ -62,6 +63,7 @@ export default function LayoutClient({ children }) {
 
   return (
     <>
+      <Loader />
       <audio
         ref={audioRef}
         src="/Audios/audio.wav"

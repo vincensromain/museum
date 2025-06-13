@@ -12,8 +12,35 @@
     align-items: center;
     gap: 40px;
 
-    .narration_text {
+    .captions {
+      position: absolute;
+      top: 125px;
+      width: 100%;
       text-align: center;
+      height: 150px;
+
+      .lines {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .line {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 22px;
+        color: rgb(255, 255, 255);
+        opacity: 0.6;
+        width: 80%;
+        opacity: 0;
+        transition: opacity 0.3s ease-in-out;
+
+        &.active {
+          transition: opacity 0.3s ease-in-out;
+          opacity: 1;
+        }
+      }
     }
 
     .orb {

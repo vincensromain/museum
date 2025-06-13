@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import * as THREE from "three";
 import gsap from "gsap";
@@ -8,99 +8,141 @@ import { Draggable } from "gsap/Draggable";
 import content from "./data/content.json";
 import IconMuseum from "./components/IconsMuseum/IconsMuseum";
 import AppearRef from "./components/AppearRef/AppearRef";
-import Orb from "./components/Orb/Orb"; // ajuste le chemin si besoin
-
+import Orb from "./components/Orb/Orb";
 import "./page.scss";
 
 gsap.registerPlugin(Draggable);
 
 export default function Home() {
-  const { ctaLink, ctaLabel } = content.home;
+  const orbContainerRef = useRef(null);
+  const narrationRef = useRef(null);
   const iconRef = useRef(null);
   const ctaRef = useRef(null);
   const textRef = useRef(null);
 
-  // ref pour le container de l'orb
-  const orbContainerRef = useRef(null);
-
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [hasInteracted, setHasInteracted] = useState(false);
   const router = useRouter();
+  const { ctaLink, ctaLabel } = content.home;
+
+  const captions = [
+    {
+      time: 0,
+      text: "Bienvenue dans cette expérience immersive. Chaque phrase est synchronisée avec l'audio. Regardez comment le texte défile.",
+    },
+    {
+      time: 8,
+      text: "La ligne actuelle devient rouge automatiquement. Merci d'avoir écouté cette démonstration.",
+    },
+  ];
 
   useEffect(() => {
-    // === Animation du CTA (inchangée) ===
     const icon = iconRef.current;
     const cta = ctaRef.current;
     const text = textRef.current;
-    if (icon && cta && text) {
-      const hintTl = gsap
-        .timeline({ delay: 0.5, repeat: -1, repeatDelay: 1 })
-        .to(icon, { x: 10, duration: 0.4, ease: "power2.out" })
-        .to(icon, { x: 0, duration: 0.4, ease: "power2.inOut" });
+    if (!icon || !cta || !text) return;
 
-      const iconWidth = icon.offsetWidth;
-      const ctaWidth = cta.offsetWidth;
-      const maxX = ctaWidth - iconWidth - 13.5;
+    const hintTl = gsap
+      .timeline({ delay: 0.5, repeat: -1, repeatDelay: 1 })
+      .to(icon, { x: 10, duration: 0.4, ease: "power2.out" })
+      .to(icon, { x: 0, duration: 0.4, ease: "power2.inOut" });
 
-      Draggable.create(icon, {
-        type: "x",
-        bounds: { minX: 0, maxX },
-        inertia: true,
-        onPress() {
-          hintTl.kill();
-        },
-        onDrag() {
-          const progress = this.x / maxX;
-          gsap.to(text, {
-            opacity: 1 - progress * 2,
-            duration: 0.1,
-            overwrite: "auto",
-          });
-        },
-        onDragEnd() {
-          if (this.x >= maxX - 1) router.push(ctaLink || "#");
-          else {
-            gsap.to(icon, { x: 0, duration: 0.3, ease: "power2.out" });
-            gsap.to(text, { opacity: 1, duration: 0.3, ease: "power2.out" });
-          }
-        },
-      });
-    }
+    const maxX = cta.offsetWidth - icon.offsetWidth - 13.5;
+    Draggable.create(icon, {
+      type: "x",
+      bounds: { minX: 0, maxX },
+      inertia: true,
+      onPress() {
+        hintTl.kill();
+      },
+      onDrag() {
+        const progress = this.x / maxX;
+        gsap.to(text, { opacity: 1 - progress * 2, duration: 0.1 });
+      },
+      onDragEnd() {
+        if (this.x >= maxX - 1) router.push(ctaLink || "#");
+        else {
+          gsap.to(icon, { x: 0, duration: 0.3, ease: "power2.out" });
+          gsap.to(text, { opacity: 1, duration: 0.3, ease: "power2.out" });
+        }
+      },
+    });
+  }, [ctaLink, router]);
 
-    // === Rendu Three.js de l'orb ===
+  useEffect(() => {
+    const audio = narrationRef.current;
+    if (!audio || !hasInteracted) return;
+
+    const playAudio = () => {
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise.catch((error) => {
+          console.error("Error attempting to play audio:", error);
+        });
+      }
+    };
+
+    playAudio();
+  }, [hasInteracted]);
+
+  useEffect(() => {
+    const audio = narrationRef.current;
+    if (!audio) return;
+
+    let lastIdx = 0;
+    const findIdx = (t) => {
+      for (let i = captions.length - 1; i >= 0; i--) {
+        if (t >= captions[i].time) return i;
+      }
+      return 0;
+    };
+
+    const onTimeUpdate = () => {
+      const idx = findIdx(audio.currentTime);
+      if (idx !== lastIdx) {
+        lastIdx = idx;
+        setCurrentIndex(idx);
+      }
+    };
+
+    audio.addEventListener("timeupdate", onTimeUpdate);
+    return () => audio.removeEventListener("timeupdate", onTimeUpdate);
+  }, [captions]);
+
+  useEffect(() => {
     const container = orbContainerRef.current;
     if (!container) return;
 
-    // paramètres de glow identiques
     const glowParams = {
       falloff: 0.1,
-      glowInternalRadius: 6.0,
+      glowInternalRadius: 6,
       glowSharpness: 0.5,
-      opacity: 1.0,
+      opacity: 1,
       glowColor: "#ccfbff",
     };
 
-    // scène, caméra, renderer
     const scene = new THREE.Scene();
-    const width = container.clientWidth;
-    const height = container.clientHeight;
-    const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 100);
+    const camera = new THREE.PerspectiveCamera(
+      75,
+      container.clientWidth / container.clientHeight,
+      0.1,
+      100
+    );
     camera.position.set(0, 0, 2.5);
     scene.add(camera);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    renderer.setSize(width, height);
+    renderer.setSize(container.clientWidth, container.clientHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     container.appendChild(renderer.domElement);
 
-    // création de l'orb au centre
     const orbMesh = Orb({
       position: new THREE.Vector3(0, 0, 0),
       glowParams,
       scene,
     });
-
     orbMesh.scale.multiplyScalar(6);
 
-    // animation "breathe"
     const breatheTl = gsap.timeline({ repeat: -1, yoyo: true });
     breatheTl.to(orbMesh.material.uniforms.glowInternalRadius, {
       value: glowParams.glowInternalRadius + 1,
@@ -108,43 +150,77 @@ export default function Home() {
       ease: "sine.inOut",
     });
 
-    // boucle de rendu
-    let rafId;
-    const animate = () => {
-      rafId = requestAnimationFrame(animate);
-      renderer.render(scene, camera);
-    };
-    animate();
+    let audioContext;
+    const startAudioContext = () => {
+      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const audioElement = narrationRef.current;
+      const audioSource = audioContext.createMediaElementSource(audioElement);
+      const analyser = audioContext.createAnalyser();
+      audioSource.connect(analyser);
+      analyser.connect(audioContext.destination);
 
-    // redimensionnement
+      analyser.fftSize = 256;
+      const bufferLength = analyser.frequencyBinCount;
+      const dataArray = new Uint8Array(bufferLength);
+
+      const animate = () => {
+        requestAnimationFrame(animate);
+        analyser.getByteFrequencyData(dataArray);
+
+        const average = dataArray.reduce((a, b) => a + b, 0) / bufferLength;
+        orbMesh.material.uniforms.glowInternalRadius.value =
+          glowParams.glowInternalRadius + average / 30;
+
+        renderer.render(scene, camera);
+      };
+      animate();
+    };
+
+    const handleUserInteraction = () => {
+      setHasInteracted(true);
+      startAudioContext();
+      document.removeEventListener("click", handleUserInteraction);
+    };
+
+    document.addEventListener("click", handleUserInteraction, { once: true });
+
     const onResize = () => {
-      const w = container.clientWidth;
-      const h = container.clientHeight;
-      camera.aspect = w / h;
+      renderer.setSize(container.clientWidth, container.clientHeight);
+      camera.aspect = container.clientWidth / container.clientHeight;
       camera.updateProjectionMatrix();
-      renderer.setSize(w, h);
     };
     window.addEventListener("resize", onResize);
 
-    // cleanup
     return () => {
       window.removeEventListener("resize", onResize);
-      cancelAnimationFrame(rafId);
       container.removeChild(renderer.domElement);
       orbMesh.geometry.dispose();
       orbMesh.material.dispose();
       renderer.dispose();
     };
-  }, [ctaLink, router]);
+  }, []);
 
   return (
     <main>
       <section className="home inside">
         <div className="narration">
-          {/* on garde la div pour le positionnement CSS */}
+          <audio
+            ref={narrationRef}
+            src="/Audios/narration.m4a"
+            style={{ display: "none" }}
+          />
+          <div className="captions">
+            {captions.map((c, i) => (
+              <div
+                key={i}
+                className={`line ${i === currentIndex ? "active" : ""}`}
+              >
+                {c.text}
+              </div>
+            ))}
+          </div>
           <div className="orb" ref={orbContainerRef}></div>
         </div>
-
         <AppearRef delay={0.4}>
           <div className="cta" ref={ctaRef}>
             <div className="cta_content">
