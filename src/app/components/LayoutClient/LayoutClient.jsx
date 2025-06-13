@@ -1,5 +1,4 @@
 "use client";
-
 import { useRef, useEffect } from "react";
 import LogoHeader from "../LogoHeader/LogoHeader";
 import Noise from "../NoiseCanvas/NoiseCanvas";
@@ -13,22 +12,17 @@ export default function LayoutClient({ children }) {
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
-
-    // 1) Démarrer muet pour que autoplay soit autorisé
+    audio.volume = 0.1;
     audio.muted = true;
-
-    // 2) Reprendre la position si déjà sauvegardée
     const savedTime = localStorage.getItem("audio-current-time");
     if (savedTime) {
       audio.currentTime = parseFloat(savedTime);
     }
 
-    // 3) Lancer la lecture dès que possible (muet pour l’instant)
     const playAudio = () => {
       audio
         .play()
         .then(() => {
-          // Si la lecture démarre avec succès, on peut essayer de retirer le muet
           audio.muted = false;
         })
         .catch((err) => {
@@ -38,7 +32,6 @@ export default function LayoutClient({ children }) {
 
     playAudio();
 
-    // 4) Sur le premier clic utilisateur, on enlève le muet et on joue
     const unmuteAndPlay = () => {
       audio.muted = false;
       audio.play().catch((err) => {
@@ -48,15 +41,41 @@ export default function LayoutClient({ children }) {
     };
     document.addEventListener("click", unmuteAndPlay, { once: true });
 
-    // 5) Sauvegarde de la position en continu
     const onTimeUpdate = () => {
       localStorage.setItem("audio-current-time", audio.currentTime);
     };
     audio.addEventListener("timeupdate", onTimeUpdate);
 
+    const handleToggleAudio = (event) => {
+      if (event.detail) {
+        gsap.to(audio, {
+          volume: 1,
+          duration: 0.5,
+          ease: "power1.out",
+          onStart: () => {
+            audio
+              .play()
+              .catch((err) => console.warn("Error playing audio:", err));
+          },
+        });
+      } else {
+        gsap.to(audio, {
+          volume: 0,
+          duration: 0.5,
+          ease: "power1.in",
+          onComplete: () => {
+            audio.pause();
+          },
+        });
+      }
+    };
+
+    window.addEventListener("toggleAudio", handleToggleAudio);
+
     return () => {
       document.removeEventListener("click", unmuteAndPlay);
       audio.removeEventListener("timeupdate", onTimeUpdate);
+      window.removeEventListener("toggleAudio", handleToggleAudio);
       localStorage.setItem("audio-current-time", audio.currentTime);
     };
   }, []);
@@ -82,7 +101,7 @@ export default function LayoutClient({ children }) {
 
       {children}
 
-      <AudioToggleButton audioRef={audioRef} />
+      <AudioToggleButton />
     </>
   );
 }
