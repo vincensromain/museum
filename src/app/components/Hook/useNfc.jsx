@@ -9,7 +9,7 @@ export default function useNfc(active = false, setScanned = () => {}) {
     if (!active) return;
 
     if (typeof window === "undefined" || !("NDEFReader" in window)) {
-      console.warn("Web NFC non disponible");
+      console.warn("❌ Web NFC non disponible sur cet appareil.");
       return;
     }
 
@@ -32,10 +32,10 @@ export default function useNfc(active = false, setScanned = () => {}) {
           }
         };
       })
-      .catch((error) => {
-        console.error("Erreur Web NFC :", error);
+      .catch((err) => {
+        console.error("❌ Erreur Web NFC :", err);
       });
 
     return () => controller.abort();
-  }, [active, router, setScanned]);
+  }, [active, setScanned, router]);
 }

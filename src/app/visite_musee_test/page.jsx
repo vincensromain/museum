@@ -7,7 +7,7 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { GUI } from "lil-gui";
 import gsap from "gsap";
 import Modal from "../components/Modal/Modal";
-import content from "../data/content.json";
+import content from "../data/content.json"; // doit contenir artworks[]
 import "./visite_musee_test.scss";
 
 export default function Home() {
@@ -254,10 +254,40 @@ export default function Home() {
       const bounds = renderer.domElement.getBoundingClientRect();
       mouse.x = ((event.clientX - bounds.left) / bounds.width) * 2 - 1;
       mouse.y = -((event.clientY - bounds.top) / bounds.height) * 2 + 1;
+
       raycaster.setFromCamera(mouse, camera);
       const intersects = raycaster.intersectObjects(clickableDiamonds, true);
+
       if (intersects.length > 0) {
         const name = intersects[0].object.name;
+        console.log("Click sur :", name);
+
+        if (name === "point_1") {
+          const targetPos = new THREE.Vector3(...lightDefs.point_2.position);
+          const cameraTarget = {
+            x: targetPos.x,
+            y: targetPos.y + 2,
+            z: targetPos.z + 4,
+          };
+
+          gsap.to(camera.position, {
+            x: cameraTarget.x,
+            y: cameraTarget.y,
+            z: cameraTarget.z,
+            duration: 2,
+            ease: "power3.inOut",
+            onUpdate: () => controls.target.copy(targetPos),
+          });
+
+          gsap.to(controls.target, {
+            x: targetPos.x,
+            y: targetPos.y,
+            z: targetPos.z,
+            duration: 2,
+            ease: "power3.inOut",
+          });
+        }
+
         const index = Object.keys(lightDefs).indexOf(name);
         lastViewedOrbRef.current = index;
         setShowModal(true);

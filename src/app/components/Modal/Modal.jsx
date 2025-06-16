@@ -10,11 +10,12 @@ import "./Modal.scss";
 
 const Modal = ({ showReturn, content, lastViewedOrbRef, modalAppear }) => {
   const [scanned, setScanned] = useState(false);
-  useNfc(showReturn, setScanned);
-  const router = useRouter();
-
   const modalRef = useRef(null);
   const contentRef = useRef(null);
+  const router = useRouter();
+
+  // 🛰️ Activation NFC automatique quand la modale est ouverte
+  useNfc(showReturn, setScanned);
 
   // ▶️ Animation d'ouverture
   useEffect(() => {

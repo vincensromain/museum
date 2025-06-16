@@ -82,7 +82,7 @@ export default function LayoutClient({ children }) {
 
   return (
     <>
-      {/* <Loader /> */}
+      <Loader />
       <audio
         ref={audioRef}
         src="/Audios/audio.wav"

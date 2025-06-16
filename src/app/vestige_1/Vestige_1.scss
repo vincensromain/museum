@@ -35,7 +35,7 @@ $gradient-variant-1: linear-gradient(
     transform: translateX(-50%);
   }
 
-  .naration_text {
+  .naration_text_content {
     position: absolute;
     bottom: 10%;
     left: 50%;
@@ -44,6 +44,42 @@ $gradient-variant-1: linear-gradient(
     align-items: center;
     justify-content: space-between;
     width: calc(100vw - 64px);
+    z-index: 999;
+
+    .naration_text {
+      .lines {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .line {
+        position: absolute;
+        right: 0px;
+        top: 30px;
+        font-size: 20px;
+        color: rgb(255, 255, 255);
+        opacity: 0.6;
+        width: 60%;
+        top: 13px;
+        opacity: 0;
+        transition: opacity 0.3s ease-in-out;
+        text-align: center;
+
+        &.active {
+          transition: opacity 0.3s ease-in-out;
+          opacity: 1;
+        }
+      }
+    }
+
+    .naration_orb {
+      width: 140px;
+      height: 140px;
+      canvas {
+        width: 140px;
+        height: 140px;
+      }
+    }
   }
 }
 
