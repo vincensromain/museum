@@ -19,10 +19,11 @@ export default function Vestige_1() {
   const canvasRef = useRef(null);
   const orbRef = useRef(null);
   const narrationRef = useRef(null);
+  const audioContextRef = useRef(null);
+  const audioSourceRef = useRef(null);
   const router = useRouter();
 
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [hasInteracted, setHasInteracted] = useState(false);
 
   const captions = [
     {
@@ -206,13 +207,18 @@ export default function Vestige_1() {
       ease: "sine.inOut",
     });
 
-    let audioContext;
-    const startAudioContext = () => {
-      audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      const audioElement = narrationRef.current;
-      const audioSource = audioContext.createMediaElementSource(audioElement);
+    if (!audioContextRef.current) {
+      audioContextRef.current = new (window.AudioContext ||
+        window.webkitAudioContext)();
+    }
+    const audioContext = audioContextRef.current;
+    const audioElement = narrationRef.current;
+
+    if (!audioSourceRef.current) {
+      audioSourceRef.current =
+        audioContext.createMediaElementSource(audioElement);
       const analyser = audioContext.createAnalyser();
-      audioSource.connect(analyser);
+      audioSourceRef.current.connect(analyser);
       analyser.connect(audioContext.destination);
 
       analyser.fftSize = 256;
@@ -225,20 +231,12 @@ export default function Vestige_1() {
         const avg = dataArray.reduce((a, b) => a + b, 0) / bufferLength;
         orbMesh.material.uniforms.glowInternalRadius.value =
           glowParams.glowInternalRadius + avg / 30;
-
         renderer.render(scene, camera);
       };
       animate();
-    };
+    }
 
-    document.addEventListener(
-      "click",
-      () => {
-        setHasInteracted(true);
-        startAudioContext();
-      },
-      { once: true }
-    );
+    audioElement.play().catch((e) => console.warn("Autoplay blocked:", e));
 
     const onResize = () => {
       renderer.setSize(container.clientWidth, container.clientHeight);
@@ -255,12 +253,6 @@ export default function Vestige_1() {
       renderer.dispose();
     };
   }, []);
-
-  useEffect(() => {
-    const audio = narrationRef.current;
-    if (!audio || !hasInteracted) return;
-    audio.play().catch((e) => console.warn("Autoplay blocked:", e));
-  }, [hasInteracted]);
 
   useEffect(() => {
     const audio = narrationRef.current;
