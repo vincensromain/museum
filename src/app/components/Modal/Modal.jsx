@@ -1,5 +1,7 @@
 "use client";
-import React, { useState, useRef, useEffect } from "react";
+
+import React, { useEffect, useRef, useState } from "react";
+import { gsap } from "gsap";
 import useNfc from "../Hook/useNfc";
 import { useRouter } from "next/navigation";
 import IconMuseum from "../IconsMuseum/IconsMuseum";
@@ -14,16 +16,94 @@ const Modal = ({ showReturn, content, lastViewedOrbRef, modalAppear }) => {
   const modalRef = useRef(null);
   const contentRef = useRef(null);
 
-  // Ferme la modale si clic en dehors
+  // ▶️ Animation d'ouverture
+  useEffect(() => {
+    if (showReturn && modalRef.current && contentRef.current) {
+      const tl = gsap.timeline();
+
+      tl.fromTo(
+        modalRef.current,
+        { autoAlpha: 0 },
+        {
+          autoAlpha: 1,
+          duration: 0.3,
+          ease: "power2.out",
+          zIndex: 1000,
+        }
+      );
+
+      tl.fromTo(
+        contentRef.current,
+        { autoAlpha: 0, scale: 0.9 },
+        {
+          autoAlpha: 1,
+          scale: 1,
+          duration: 0.6,
+          ease: "power3.out",
+          zIndex: 1000,
+        },
+        "+=0.05"
+      );
+    }
+  }, [showReturn]);
+
+  // 🛑 Désactiver les clics sur le canvas
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      const canvas = document.querySelector(".three_canvas");
+      if (showReturn && canvas) {
+        console.log("Canvas désactivé");
+        canvas.style.pointerEvents = "none";
+      }
+    }, 10);
+
+    return () => {
+      const canvas = document.querySelector(".three_canvas");
+      if (canvas) {
+        console.log("Canvas réactivé");
+        canvas.style.pointerEvents = "auto";
+      }
+      clearTimeout(timeout);
+    };
+  }, [showReturn]);
+
+  // 🔁 Animation de fermeture
+  const closeModalAnimation = () => {
+    console.log("Fermeture animée déclenchée");
+
+    if (!modalRef.current || !contentRef.current) return;
+
+    gsap.to(contentRef.current, {
+      autoAlpha: 0,
+      scale: 0.9,
+      duration: 0.3,
+      ease: "power2.inOut",
+    });
+
+    gsap.to(modalRef.current, {
+      autoAlpha: 0,
+      duration: 0.25,
+      ease: "power2.inOut",
+      delay: 0.1,
+      onComplete: () => {
+        console.log("Animation terminée → on ferme");
+        modalAppear();
+      },
+    });
+  };
+
+  // 🔙 Clic en dehors du contenu → fermeture
   useEffect(() => {
     const handleClickOutside = (event) => {
+      console.log("Click détecté", event.target);
+
       if (
         modalRef.current &&
         contentRef.current &&
         modalRef.current.contains(event.target) &&
         !contentRef.current.contains(event.target)
       ) {
-        modalAppear(); // ferme la modale
+        closeModalAnimation();
       }
     };
 
@@ -34,10 +114,10 @@ const Modal = ({ showReturn, content, lastViewedOrbRef, modalAppear }) => {
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [showReturn, modalAppear]);
+  }, [showReturn]);
 
   return (
-    <div ref={modalRef} className={`modal ${showReturn ? "active" : ""}`}>
+    <div ref={modalRef} className="modal">
       <div ref={contentRef} className="modal_content">
         {content.artworks[lastViewedOrbRef.current] && (
           <>
@@ -50,7 +130,13 @@ const Modal = ({ showReturn, content, lastViewedOrbRef, modalAppear }) => {
               />
             </div>
 
-            <div className="cross" onClick={modalAppear}>
+            <div
+              className="cross"
+              onClick={() => {
+                console.log("Click sur la croix");
+                closeModalAnimation();
+              }}
+            >
               <IconMuseum icon="svgCross" width={56} height={56} />
             </div>
 

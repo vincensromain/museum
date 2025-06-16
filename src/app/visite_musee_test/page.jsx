@@ -1,21 +1,23 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { GUI } from "lil-gui";
 import gsap from "gsap";
-
+import Modal from "../components/Modal/Modal";
+import content from "../data/content.json";
 import "./visite_musee_test.scss";
 
 export default function Home() {
   const canvasRef = useRef(null);
+  const [showModal, setShowModal] = useState(false);
+  const lastViewedOrbRef = useRef(null);
 
   useEffect(() => {
     if (!canvasRef.current) return;
 
-    // Scene, Camera, Renderer
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(
       75,
@@ -35,7 +37,6 @@ export default function Home() {
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1;
 
-    // Controls
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
@@ -43,14 +44,12 @@ export default function Home() {
     controls.enablePan = false;
     controls.target.set(0, 0, 0);
 
-    // GUI
     const gui = new GUI();
     const camFolder = gui.addFolder("Camera");
     camFolder.add(camera.position, "x", -50, 50).name("Pos X");
     camFolder.add(camera.position, "y", -50, 50).name("Pos Y");
     camFolder.add(camera.position, "z", -50, 50).name("Pos Z");
 
-    // Ambient Light
     const ambient = new THREE.AmbientLight(0xffffff, 0.2);
     scene.add(ambient);
     const ambFolder = gui.addFolder("Ambient");
@@ -67,7 +66,6 @@ export default function Home() {
       .name("Intensity")
       .onChange((v) => (ambient.intensity = v));
 
-    // Light Definitions
     const lightDefs = {
       point_1: {
         color: 0x07b2c5,
@@ -126,8 +124,8 @@ export default function Home() {
     };
 
     const animatedDiamonds = [];
-    const clickableObjects = {};
     const pointLights = {};
+    const clickableDiamonds = [];
 
     Object.entries(lightDefs).forEach(([name, def]) => {
       const light = new THREE.PointLight(
@@ -136,12 +134,12 @@ export default function Home() {
         def.distance
       );
       light.position.set(...def.position);
-
-      const isPoint1 = name === "point_1";
-      const homeLight = name === "home";
-      const basicLight1 = name === "basicLight_1";
-      const basicLight2 = name === "basicLight_2";
-      light.visible = isPoint1 || homeLight || basicLight1 || basicLight2;
+      light.visible = [
+        "point_1",
+        "home",
+        "basicLight_1",
+        "basicLight_2",
+      ].includes(name);
       scene.add(light);
       pointLights[name] = light;
 
@@ -151,7 +149,7 @@ export default function Home() {
         intensity: def.intensity,
         distance: def.distance,
         lightOn: light.visible,
-        animate: isPoint1,
+        animate: name === "point_1",
       };
       folder
         .addColor(settings, "color")
@@ -170,8 +168,7 @@ export default function Home() {
         .name("Light On/Off")
         .onChange((v) => (light.visible = v));
 
-      const skipWire = ["home", "basicLight_1", "basicLight_2"].includes(name);
-      if (!skipWire) {
+      if (!["home", "basicLight_1", "basicLight_2"].includes(name)) {
         const size = 1;
         const pivot = new THREE.Object3D();
         pivot.position.set(
@@ -187,6 +184,7 @@ export default function Home() {
         const lineMat = new THREE.LineBasicMaterial({ color: def.color });
         const diamond = new THREE.LineSegments(edgeGeo, lineMat);
         diamond.position.set(0, -size, 0);
+        diamond.name = name;
         pivot.add(diamond);
 
         gsap.fromTo(
@@ -196,7 +194,7 @@ export default function Home() {
         );
 
         animatedDiamonds.push(pivot);
-        clickableObjects[name] = diamond;
+        clickableDiamonds.push(diamond);
 
         if (settings.animate) {
           const tween = gsap.to(diamond.scale, {
@@ -218,68 +216,6 @@ export default function Home() {
       }
     });
 
-    // Interaction on click
-    const raycaster = new THREE.Raycaster();
-    const mouse = new THREE.Vector2();
-    renderer.domElement.addEventListener("click", (event) => {
-      mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-      mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-      raycaster.setFromCamera(mouse, camera);
-      const hits = raycaster.intersectObjects(
-        Object.values(clickableObjects),
-        true
-      );
-      if (hits.length > 0) {
-        const clickedObject = hits[0].object;
-        const name = Object.entries(clickableObjects).find(
-          ([, obj]) => obj === clickedObject
-        )?.[0];
-        if (name === "point_1") goToPoint2();
-      }
-    });
-
-    // Checkpoints and final positions for movement
-    const checkpoints = [
-      new THREE.Vector3(0.02, 100.7, 2.62),
-      //   new THREE.Vector3(0, 4.7, 4),
-      //   new THREE.Vector3(8, 4.7, 3),
-      //   new THREE.Vector3(8, 4.7, -11),
-    ];
-    const endPos = new THREE.Vector3(...lightDefs.point_2.position).add(
-      new THREE.Vector3(0, 1, 0)
-    );
-
-    function goToPoint2() {
-      const startPos = camera.position.clone();
-      const localCurve = new THREE.CatmullRomCurve3([
-        startPos,
-        ...checkpoints,
-        endPos,
-      ]);
-
-      const points = localCurve.getPoints(50);
-      const splineCurve = new THREE.CatmullRomCurve3(points);
-
-      const param = { t: 0 };
-      gsap.to(param, {
-        t: 1,
-        duration: 5,
-        ease: "power3.inOut",
-        onUpdate: () => {
-          const p = splineCurve.getPoint(param.t);
-          camera.position.copy(p);
-
-          const tangent = splineCurve.getTangent(param.t).normalize();
-          controls.target.copy(p.clone().add(tangent));
-          controls.update();
-        },
-        onComplete: () => {
-          pointLights.point_2.visible = true;
-        },
-      });
-    }
-
-    // Initial movement to point_1 after 2 seconds
     const point1Pos = new THREE.Vector3(...lightDefs.point_1.position);
     const camTargetPos = {
       x: point1Pos.x,
@@ -293,9 +229,7 @@ export default function Home() {
       duration: 2,
       delay: 2,
       ease: "power3.inOut",
-      onUpdate: () => {
-        controls.target.copy(point1Pos);
-      },
+      onUpdate: () => controls.target.copy(point1Pos),
     });
     gsap.to(controls.target, {
       x: point1Pos.x,
@@ -306,13 +240,31 @@ export default function Home() {
       ease: "power3.inOut",
     });
 
-    // Load the glTF model and start the animation loop
     new GLTFLoader().load(
       "/models/Musee/scene_nolight.gltf",
       (gltf) => scene.add(gltf.scene),
       undefined,
       console.error
     );
+
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+
+    function onClick(event) {
+      const bounds = renderer.domElement.getBoundingClientRect();
+      mouse.x = ((event.clientX - bounds.left) / bounds.width) * 2 - 1;
+      mouse.y = -((event.clientY - bounds.top) / bounds.height) * 2 + 1;
+      raycaster.setFromCamera(mouse, camera);
+      const intersects = raycaster.intersectObjects(clickableDiamonds, true);
+      if (intersects.length > 0) {
+        const name = intersects[0].object.name;
+        const index = Object.keys(lightDefs).indexOf(name);
+        lastViewedOrbRef.current = index;
+        setShowModal(true);
+      }
+    }
+
+    window.addEventListener("click", onClick);
 
     function animate() {
       requestAnimationFrame(animate);
@@ -324,15 +276,29 @@ export default function Home() {
     }
     animate();
 
-    // Handle window resize
     window.addEventListener("resize", () => {
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
     });
 
-    return () => gui.destroy();
+    return () => {
+      gui.destroy();
+      window.removeEventListener("click", onClick);
+    };
   }, []);
 
-  return <canvas ref={canvasRef} className="three_canvas" />;
+  return (
+    <>
+      <canvas ref={canvasRef} className="three_canvas" />
+      {showModal && (
+        <Modal
+          showReturn={showModal}
+          content={content}
+          lastViewedOrbRef={lastViewedOrbRef}
+          modalAppear={() => setShowModal(false)}
+        />
+      )}
+    </>
+  );
 }

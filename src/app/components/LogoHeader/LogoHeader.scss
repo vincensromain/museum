@@ -1,4 +1,6 @@
 .logo_header {
+  position: relative;
+  z-index: 9999;
   svg {
     position: absolute;
     top: 22px;
