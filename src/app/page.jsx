@@ -150,13 +150,13 @@ export default function Home() {
       ease: "sine.inOut",
     });
 
-    let audioContext;
     const startAudioContext = () => {
-      audioContext = new (window.AudioContext || window.webkitAudioContext)();
       const audioElement = narrationRef.current;
-      const audioSource = audioContext.createMediaElementSource(audioElement);
+      const audioContext = new (window.AudioContext ||
+        window.webkitAudioContext)();
+      const source = audioContext.createMediaElementSource(audioElement);
       const analyser = audioContext.createAnalyser();
-      audioSource.connect(analyser);
+      source.connect(analyser);
       analyser.connect(audioContext.destination);
 
       analyser.fftSize = 256;
@@ -166,11 +166,9 @@ export default function Home() {
       const animate = () => {
         requestAnimationFrame(animate);
         analyser.getByteFrequencyData(dataArray);
-
         const average = dataArray.reduce((a, b) => a + b, 0) / bufferLength;
         orbMesh.material.uniforms.glowInternalRadius.value =
           glowParams.glowInternalRadius + average / 30;
-
         renderer.render(scene, camera);
       };
       animate();
@@ -200,6 +198,27 @@ export default function Home() {
     };
   }, []);
 
+  // 🔁 Redémarrage de la narration
+  const restartNarration = () => {
+    const audio = narrationRef.current;
+    if (!audio) return;
+
+    setTimeout(() => {
+      if (hasInteracted) {
+        setCurrentIndex(0);
+        audio.currentTime = 0;
+        audio
+          .play()
+          .then(() => {
+            console.log("🔁 Narration redémarrée");
+          })
+          .catch((err) => {
+            console.warn("Erreur relance narration :", err);
+          });
+      }
+    }, 2000);
+  };
+
   return (
     <main>
       <section className="home inside">
@@ -208,6 +227,7 @@ export default function Home() {
             ref={narrationRef}
             src="/Audios/narration.m4a"
             style={{ display: "none" }}
+            onEnded={restartNarration}
           />
           <div className="captions">
             {captions.map((c, i) => (

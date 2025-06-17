@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
-import { GUI } from "lil-gui";
 import gsap from "gsap";
 import Modal from "../components/Modal/Modal";
 import content from "../data/content.json";
@@ -108,6 +107,12 @@ export default function Home() {
       },
     };
 
+    // ✅ Détection première visite
+    const firstVisit = localStorage.getItem("hasVisitedHome") !== "true";
+    if (firstVisit) {
+      localStorage.setItem("hasVisitedHome", "true");
+    }
+
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(
       75,
@@ -115,6 +120,7 @@ export default function Home() {
       0.1,
       1000
     );
+
     const renderer = new THREE.WebGLRenderer({
       antialias: true,
       canvas: canvasRef.current,
@@ -131,33 +137,46 @@ export default function Home() {
     controls.enablePan = false;
 
     const cameraFromKey = localStorage.getItem("cameraFrom");
-    if (cameraFromKey && lightDefs[cameraFromKey]) {
-      const pos = lightDefs[cameraFromKey].position;
-      camera.position.set(pos[0], pos[1] + 2, pos[2] + 4);
+    let cameraStartPos;
+
+    if (firstVisit && lightDefs["home"]) {
+      cameraStartPos = lightDefs["home"].position;
+    } else if (cameraFromKey && lightDefs[cameraFromKey]) {
+      cameraStartPos = lightDefs[cameraFromKey].position;
+    } else {
+      cameraStartPos = lightDefs[mainPoint].position;
     }
 
-    const mainPos = new THREE.Vector3(...lightDefs[mainPoint].position);
-    const cameraTarget = {
-      x: mainPos.x,
-      y: mainPos.y + 2,
-      z: mainPos.z + 4,
-    };
+    camera.position.set(
+      cameraStartPos[0],
+      cameraStartPos[1] + 2,
+      cameraStartPos[2] + 4
+    );
 
-    gsap.to(camera.position, {
-      ...cameraTarget,
-      duration: 2,
-      ease: "power3.inOut",
-      onUpdate: () => controls.target.copy(mainPos),
-    });
-    gsap.to(controls.target, {
-      x: mainPos.x,
-      y: mainPos.y,
-      z: mainPos.z,
-      duration: 2,
-      ease: "power3.inOut",
-    });
+    const targetPos = new THREE.Vector3(...lightDefs[mainPoint].position);
 
-    const gui = new GUI();
+    // ✅ Animation caméra uniquement à la première visite
+    if (firstVisit) {
+      gsap.to(camera.position, {
+        x: targetPos.x,
+        y: targetPos.y + 2,
+        z: targetPos.z + 4,
+        duration: 2,
+        ease: "power3.inOut",
+        onUpdate: () => controls.target.copy(targetPos),
+      });
+
+      gsap.to(controls.target, {
+        x: targetPos.x,
+        y: targetPos.y,
+        z: targetPos.z,
+        duration: 2,
+        ease: "power3.inOut",
+      });
+    } else {
+      controls.target.copy(targetPos);
+    }
+
     const ambient = new THREE.AmbientLight(0xffffff, 0.2);
     scene.add(ambient);
 
@@ -222,9 +241,9 @@ export default function Home() {
       diamondPivots[name] = pivot;
     });
 
-    new GLTFLoader().load("/models/Musee/scene_nolight.gltf", (gltf) =>
-      scene.add(gltf.scene)
-    );
+    new GLTFLoader().load("/models/Musee/scene_nolight.gltf", (gltf) => {
+      scene.add(gltf.scene);
+    });
 
     function animate() {
       requestAnimationFrame(animate);
@@ -293,7 +312,6 @@ export default function Home() {
     return () => {
       window.removeEventListener("click", onClick);
       window.removeEventListener("next-point", activateNextPoint);
-      gui.destroy();
     };
   }, [mainPoint, activePoints]);
 

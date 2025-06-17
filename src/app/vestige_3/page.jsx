@@ -7,7 +7,7 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
-import "./Vestige_2.scss";
+import "./Vestige_3.scss";
 import IconMuseum from "../components/IconsMuseum/IconsMuseum";
 import VestigeContent from "../components/VestigeContent/VestigeContent";
 import Narrator from "../components/Narrator/Narrator";

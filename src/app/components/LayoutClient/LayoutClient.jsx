@@ -5,6 +5,7 @@ import Noise from "../NoiseCanvas/NoiseCanvas";
 import AppearRef from "../AppearRef/AppearRef";
 import AudioToggleButton from "../AudioToggle/AudioToggle";
 import Loader from "../Loader/Loader";
+import { gsap } from "gsap";
 
 export default function LayoutClient({ children }) {
   const audioRef = useRef(null);
@@ -12,8 +13,11 @@ export default function LayoutClient({ children }) {
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
+
+    // ✅ Volume initial à 0.1
     audio.volume = 0.1;
     audio.muted = true;
+
     const savedTime = localStorage.getItem("audio-current-time");
     if (savedTime) {
       audio.currentTime = parseFloat(savedTime);
@@ -34,9 +38,9 @@ export default function LayoutClient({ children }) {
 
     const unmuteAndPlay = () => {
       audio.muted = false;
-      audio.play().catch((err) => {
-        console.warn("Relance après clic bloquée :", err.name);
-      });
+      audio
+        .play()
+        .catch((err) => console.warn("Relance après clic bloquée :", err.name));
       document.removeEventListener("click", unmuteAndPlay);
     };
     document.addEventListener("click", unmuteAndPlay, { once: true });
@@ -46,28 +50,28 @@ export default function LayoutClient({ children }) {
     };
     audio.addEventListener("timeupdate", onTimeUpdate);
 
+    // ✅ Ne jamais dépasser 0.1 pour audio.wav
     const handleToggleAudio = (event) => {
-      if (event.detail) {
-        gsap.to(audio, {
-          volume: 1,
-          duration: 0.5,
-          ease: "power1.out",
-          onStart: () => {
+      const isOn = event.detail;
+      const targetVolume = 0.1;
+
+      gsap.to(audio, {
+        volume: isOn ? targetVolume : 0,
+        duration: 0.5,
+        ease: "power1.inOut",
+        onStart: () => {
+          if (isOn) {
             audio
               .play()
               .catch((err) => console.warn("Error playing audio:", err));
-          },
-        });
-      } else {
-        gsap.to(audio, {
-          volume: 0,
-          duration: 0.5,
-          ease: "power1.in",
-          onComplete: () => {
+          }
+        },
+        onComplete: () => {
+          if (!isOn) {
             audio.pause();
-          },
-        });
-      }
+          }
+        },
+      });
     };
 
     window.addEventListener("toggleAudio", handleToggleAudio);
