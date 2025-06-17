@@ -14,14 +14,21 @@ const Modal = ({ showReturn, content, lastViewedOrbRef, modalAppear }) => {
   const contentRef = useRef(null);
   const router = useRouter();
 
-  // 🛰️ Activation NFC automatique quand la modale est ouverte
+  const currentIndex = lastViewedOrbRef.current ?? 0;
+  const currentArtwork = content.artworks[currentIndex];
+
+  // 🛰️ NFC : activation automatique à l'ouverture
   useNfc(showReturn, setScanned);
+
+  // ✅ Déclencheur de progression
+  const triggerNextPoint = () => {
+    window.dispatchEvent(new CustomEvent("next-point"));
+  };
 
   // ▶️ Animation d'ouverture
   useEffect(() => {
     if (showReturn && modalRef.current && contentRef.current) {
       const tl = gsap.timeline();
-
       tl.fromTo(
         modalRef.current,
         { autoAlpha: 0 },
@@ -53,7 +60,6 @@ const Modal = ({ showReturn, content, lastViewedOrbRef, modalAppear }) => {
     const timeout = setTimeout(() => {
       const canvas = document.querySelector(".three_canvas");
       if (showReturn && canvas) {
-        console.log("Canvas désactivé");
         canvas.style.pointerEvents = "none";
       }
     }, 10);
@@ -61,17 +67,14 @@ const Modal = ({ showReturn, content, lastViewedOrbRef, modalAppear }) => {
     return () => {
       const canvas = document.querySelector(".three_canvas");
       if (canvas) {
-        console.log("Canvas réactivé");
         canvas.style.pointerEvents = "auto";
       }
       clearTimeout(timeout);
     };
   }, [showReturn]);
 
-  // 🔁 Animation de fermeture
+  // 🔁 Fermeture animée
   const closeModalAnimation = () => {
-    console.log("Fermeture animée déclenchée");
-
     if (!modalRef.current || !contentRef.current) return;
 
     gsap.to(contentRef.current, {
@@ -87,17 +90,14 @@ const Modal = ({ showReturn, content, lastViewedOrbRef, modalAppear }) => {
       ease: "power2.inOut",
       delay: 0.1,
       onComplete: () => {
-        console.log("Animation terminée → on ferme");
         modalAppear();
       },
     });
   };
 
-  // 🔙 Clic en dehors du contenu → fermeture
+  // 🔙 Fermer si clic en dehors
   useEffect(() => {
     const handleClickOutside = (event) => {
-      console.log("Click détecté", event.target);
-
       if (
         modalRef.current &&
         contentRef.current &&
@@ -120,38 +120,27 @@ const Modal = ({ showReturn, content, lastViewedOrbRef, modalAppear }) => {
   return (
     <div ref={modalRef} className="modal">
       <div ref={contentRef} className="modal_content">
-        {content.artworks[lastViewedOrbRef.current] && (
+        {currentArtwork && (
           <>
             <div className="icon">
               <IconMuseum icon="svgScan" width={56} height={56} />
-              <IconMuseum
-                icon={content.artworks[lastViewedOrbRef.current].icon}
-                width={30}
-                height={30}
-              />
+              <IconMuseum icon={currentArtwork.icon} width={30} height={30} />
             </div>
 
-            <div
-              className="cross"
-              onClick={() => {
-                console.log("Click sur la croix");
-                closeModalAnimation();
-              }}
-            >
+            <div className="cross" onClick={closeModalAnimation}>
               <IconMuseum icon="svgCross" width={56} height={56} />
             </div>
 
             <div className="artwork_content">
-              <h2 className="artwork_name">
-                {content.artworks[lastViewedOrbRef.current].title}
-              </h2>
+              <h2 className="artwork_name">{currentArtwork.title}</h2>
               <p className="artwork_description">
-                {content.artworks[lastViewedOrbRef.current].description}
+                {currentArtwork.description}
               </p>
               <div className="hypertext">
                 <Link
-                  href={content.artworks[lastViewedOrbRef.current].link}
+                  href={currentArtwork.link}
                   className="hypertext_link"
+                  onClick={triggerNextPoint}
                 >
                   Je n'ai pas accès à la puce NFC
                 </Link>

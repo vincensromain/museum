@@ -279,7 +279,13 @@ export default function Vestige_1() {
   }, [captions]);
 
   const handleReturn = () => {
+    // On signale qu'on revient pour activer le point suivant
+    localStorage.setItem("pendingAdvance", "true");
+
+    // (Optionnel) on peut aussi conserver museumProgress si tu l’utilises ailleurs
     localStorage.setItem("museumProgress", "2");
+
+    // Retour vers la visite
     router.push("/visite_musee_test");
   };
 

@@ -7,64 +7,49 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { GUI } from "lil-gui";
 import gsap from "gsap";
 import Modal from "../components/Modal/Modal";
-import content from "../data/content.json"; // doit contenir artworks[]
+import content from "../data/content.json";
 import "./visite_musee_test.scss";
 
 export default function Home() {
   const canvasRef = useRef(null);
   const [showModal, setShowModal] = useState(false);
   const lastViewedOrbRef = useRef(null);
+  const [activePoints, setActivePoints] = useState([]);
+  const [mainPoint, setMainPoint] = useState(null);
 
   useEffect(() => {
-    if (!canvasRef.current) return;
-
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(
-      75,
-      window.innerWidth / window.innerHeight,
-      0.1,
-      1000
+    const saved = localStorage.getItem("activePoints");
+    const last = localStorage.getItem("lastMainPoint");
+    const parsedPoints = saved ? JSON.parse(saved) : ["point_1"];
+    const resolvedMain = last || "point_1";
+    console.log(
+      "⏳ Chargement init — activePoints:",
+      parsedPoints,
+      "mainPoint:",
+      resolvedMain
     );
-    camera.position.set(-6, 8, 14);
+    setActivePoints(parsedPoints);
+    setMainPoint(resolvedMain);
+  }, []);
 
-    const renderer = new THREE.WebGLRenderer({
-      antialias: true,
-      canvas: canvasRef.current,
-    });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.physicallyCorrectLights = true;
-    renderer.outputEncoding = THREE.sRGBEncoding;
-    renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1;
+  useEffect(() => {
+    if (!mainPoint) return;
+    const pendingAdvance = localStorage.getItem("pendingAdvance") === "true";
+    console.log(
+      "🔁 mainPoint changed:",
+      mainPoint,
+      "| pendingAdvance =",
+      pendingAdvance
+    );
+    if (pendingAdvance) {
+      console.log("➡️ Dispatching 'next-point' event");
+      localStorage.removeItem("pendingAdvance");
+      window.dispatchEvent(new CustomEvent("next-point"));
+    }
+  }, [mainPoint]);
 
-    const controls = new OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.05;
-    controls.enableZoom = false;
-    controls.enablePan = false;
-    controls.target.set(0, 0, 0);
-
-    const gui = new GUI();
-    const camFolder = gui.addFolder("Camera");
-    camFolder.add(camera.position, "x", -50, 50).name("Pos X");
-    camFolder.add(camera.position, "y", -50, 50).name("Pos Y");
-    camFolder.add(camera.position, "z", -50, 50).name("Pos Z");
-
-    const ambient = new THREE.AmbientLight(0xffffff, 0.2);
-    scene.add(ambient);
-    const ambFolder = gui.addFolder("Ambient");
-    const ambSettings = {
-      color: ambient.color.getHex(),
-      intensity: ambient.intensity,
-    };
-    ambFolder
-      .addColor(ambSettings, "color")
-      .name("Color")
-      .onChange((v) => ambient.color.set(v));
-    ambFolder
-      .add(ambSettings, "intensity", 0, 1)
-      .name("Intensity")
-      .onChange((v) => (ambient.intensity = v));
+  useEffect(() => {
+    if (!canvasRef.current || !mainPoint || activePoints.length === 0) return;
 
     const lightDefs = {
       point_1: {
@@ -123,129 +108,133 @@ export default function Home() {
       },
     };
 
-    const animatedDiamonds = [];
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(
+      75,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      1000
+    );
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      canvas: canvasRef.current,
+    });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.physicallyCorrectLights = true;
+    renderer.outputEncoding = THREE.sRGBEncoding;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1;
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.enableZoom = false;
+    controls.enablePan = false;
+
+    const cameraFromKey = localStorage.getItem("cameraFrom");
+    if (cameraFromKey && lightDefs[cameraFromKey]) {
+      const pos = lightDefs[cameraFromKey].position;
+      camera.position.set(pos[0], pos[1] + 2, pos[2] + 4);
+    }
+
+    const mainPos = new THREE.Vector3(...lightDefs[mainPoint].position);
+    const cameraTarget = {
+      x: mainPos.x,
+      y: mainPos.y + 2,
+      z: mainPos.z + 4,
+    };
+
+    gsap.to(camera.position, {
+      ...cameraTarget,
+      duration: 2,
+      ease: "power3.inOut",
+      onUpdate: () => controls.target.copy(mainPos),
+    });
+    gsap.to(controls.target, {
+      x: mainPos.x,
+      y: mainPos.y,
+      z: mainPos.z,
+      duration: 2,
+      ease: "power3.inOut",
+    });
+
+    const gui = new GUI();
+    const ambient = new THREE.AmbientLight(0xffffff, 0.2);
+    scene.add(ambient);
+
     const pointLights = {};
+    const diamondPivots = {};
+    const diamondTweens = {};
     const clickableDiamonds = [];
 
     Object.entries(lightDefs).forEach(([name, def]) => {
+      const isUtilityLight = ["home", "basicLight_1", "basicLight_2"].includes(
+        name
+      );
       const light = new THREE.PointLight(
         def.color,
         def.intensity,
         def.distance
       );
       light.position.set(...def.position);
-      light.visible = [
-        "point_1",
-        "home",
-        "basicLight_1",
-        "basicLight_2",
-      ].includes(name);
+      light.visible = isUtilityLight || activePoints.includes(name);
       scene.add(light);
       pointLights[name] = light;
 
-      const folder = gui.addFolder(name);
-      const settings = {
-        color: def.color,
-        intensity: def.intensity,
-        distance: def.distance,
-        lightOn: light.visible,
-        animate: name === "point_1",
-      };
-      folder
-        .addColor(settings, "color")
-        .name("Color")
-        .onChange((v) => light.color.set(v));
-      folder
-        .add(settings, "intensity", 0, 50)
-        .name("Intensity")
-        .onChange((v) => (light.intensity = v));
-      folder
-        .add(settings, "distance", 0, 100)
-        .name("Distance")
-        .onChange((v) => (light.distance = v));
-      folder
-        .add(settings, "lightOn")
-        .name("Light On/Off")
-        .onChange((v) => (light.visible = v));
+      if (isUtilityLight) return;
 
-      if (!["home", "basicLight_1", "basicLight_2"].includes(name)) {
-        const size = 1;
-        const pivot = new THREE.Object3D();
-        pivot.position.set(
-          def.position[0],
-          def.position[1] + size,
-          def.position[2]
-        );
-        pivot.rotationSpeed = 0.01;
-        scene.add(pivot);
+      const size = 1;
+      const pivot = new THREE.Object3D();
+      pivot.position.set(
+        def.position[0],
+        def.position[1] + size,
+        def.position[2]
+      );
+      pivot.rotationSpeed = 0.01;
+      scene.add(pivot);
 
-        const octGeo = new THREE.OctahedronGeometry(size);
-        const edgeGeo = new THREE.EdgesGeometry(octGeo);
-        const lineMat = new THREE.LineBasicMaterial({ color: def.color });
-        const diamond = new THREE.LineSegments(edgeGeo, lineMat);
-        diamond.position.set(0, -size, 0);
-        diamond.name = name;
-        pivot.add(diamond);
+      const geometry = new THREE.OctahedronGeometry(size);
+      const edges = new THREE.EdgesGeometry(geometry);
+      const material = new THREE.LineBasicMaterial({ color: def.color });
+      const diamond = new THREE.LineSegments(edges, material);
+      diamond.name = name;
+      diamond.position.set(0, -size, 0);
+      pivot.add(diamond);
+      diamond.scale.set(0.2, 0.2, 0.2);
 
-        gsap.fromTo(
-          diamond.scale,
-          { x: 0.3, y: 0.3, z: 0.3 },
-          { x: 0.5, y: 0.5, z: 0.5, duration: 1.3, ease: "power3.inOut" }
-        );
+      const isActive = activePoints.includes(name);
+      diamond.visible = isActive;
+      clickableDiamonds.push(diamond);
 
-        animatedDiamonds.push(pivot);
-        clickableDiamonds.push(diamond);
-
-        if (settings.animate) {
-          const tween = gsap.to(diamond.scale, {
-            x: 0.5,
-            y: 0.5,
-            z: 0.5,
-            duration: 0.8,
-            ease: "power3",
-            repeat: -1,
-            yoyo: true,
-          });
-          folder
-            .add(settings, "animate")
-            .name("Animate Diamond")
-            .onChange((v) => {
-              v ? tween.play() : tween.pause();
-            });
-        }
+      if (isActive && name === mainPoint) {
+        diamondTweens[name] = gsap.to(diamond.scale, {
+          x: 0.5,
+          y: 0.5,
+          z: 0.5,
+          duration: 0.8,
+          ease: "power3.inOut",
+          yoyo: true,
+          repeat: -1,
+        });
+      } else {
+        gsap.set(diamond.scale, { x: 0.5, y: 0.5, z: 0.5 });
       }
+
+      diamondPivots[name] = pivot;
     });
 
-    const point1Pos = new THREE.Vector3(...lightDefs.point_1.position);
-    const camTargetPos = {
-      x: point1Pos.x,
-      y: point1Pos.y + 2,
-      z: point1Pos.z + 4,
-    };
-    gsap.to(camera.position, {
-      x: camTargetPos.x,
-      y: camTargetPos.y,
-      z: camTargetPos.z,
-      duration: 2,
-      delay: 2,
-      ease: "power3.inOut",
-      onUpdate: () => controls.target.copy(point1Pos),
-    });
-    gsap.to(controls.target, {
-      x: point1Pos.x,
-      y: point1Pos.y,
-      z: point1Pos.z,
-      duration: 2,
-      delay: 2,
-      ease: "power3.inOut",
-    });
-
-    new GLTFLoader().load(
-      "/models/Musee/scene_nolight.gltf",
-      (gltf) => scene.add(gltf.scene),
-      undefined,
-      console.error
+    new GLTFLoader().load("/models/Musee/scene_nolight.gltf", (gltf) =>
+      scene.add(gltf.scene)
     );
+
+    function animate() {
+      requestAnimationFrame(animate);
+      Object.values(diamondPivots).forEach((pivot) => {
+        pivot.rotation.y += pivot.rotationSpeed;
+      });
+      controls.update();
+      renderer.render(scene, camera);
+    }
+    animate();
 
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
@@ -260,51 +249,40 @@ export default function Home() {
 
       if (intersects.length > 0) {
         const name = intersects[0].object.name;
-        console.log("Click sur :", name);
-
-        if (name === "point_1") {
-          const targetPos = new THREE.Vector3(...lightDefs.point_2.position);
-          const cameraTarget = {
-            x: targetPos.x,
-            y: targetPos.y + 2,
-            z: targetPos.z + 4,
-          };
-
-          gsap.to(camera.position, {
-            x: cameraTarget.x,
-            y: cameraTarget.y,
-            z: cameraTarget.z,
-            duration: 2,
-            ease: "power3.inOut",
-            onUpdate: () => controls.target.copy(targetPos),
-          });
-
-          gsap.to(controls.target, {
-            x: targetPos.x,
-            y: targetPos.y,
-            z: targetPos.z,
-            duration: 2,
-            ease: "power3.inOut",
-          });
-        }
-
-        const index = Object.keys(lightDefs).indexOf(name);
-        lastViewedOrbRef.current = index;
+        console.log("💎 Point cliqué :", name);
+        lastViewedOrbRef.current = Object.keys(lightDefs).indexOf(name);
+        localStorage.setItem("cameraFrom", mainPoint);
+        setMainPoint(name);
+        localStorage.setItem("lastMainPoint", name);
         setShowModal(true);
       }
     }
 
     window.addEventListener("click", onClick);
 
-    function animate() {
-      requestAnimationFrame(animate);
-      animatedDiamonds.forEach((pivot) => {
-        pivot.rotation.y += pivot.rotationSpeed;
-      });
-      controls.update();
-      renderer.render(scene, camera);
+    function activateNextPoint() {
+      const keys = Object.keys(lightDefs).filter(
+        (key) => !["home", "basicLight_1", "basicLight_2"].includes(key)
+      );
+      const currentIndex = keys.indexOf(mainPoint);
+      const nextPoint = keys[currentIndex + 1];
+      console.log(
+        "🟢 activateNextPoint — main =",
+        mainPoint,
+        "→ next =",
+        nextPoint
+      );
+
+      if (!nextPoint) return;
+
+      const updated = [...new Set([...activePoints, nextPoint])];
+      setActivePoints(updated);
+      setMainPoint(nextPoint);
+      localStorage.setItem("activePoints", JSON.stringify(updated));
+      localStorage.setItem("lastMainPoint", nextPoint);
     }
-    animate();
+
+    window.addEventListener("next-point", activateNextPoint);
 
     window.addEventListener("resize", () => {
       camera.aspect = window.innerWidth / window.innerHeight;
@@ -313,10 +291,11 @@ export default function Home() {
     });
 
     return () => {
-      gui.destroy();
       window.removeEventListener("click", onClick);
+      window.removeEventListener("next-point", activateNextPoint);
+      gui.destroy();
     };
-  }, []);
+  }, [mainPoint, activePoints]);
 
   return (
     <>
