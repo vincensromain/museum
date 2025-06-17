@@ -21,8 +21,6 @@ export default function Home() {
       0.1,
       1000
     );
-
-    // Position initiale de la caméra
     camera.position.set(-10, 10, 10);
 
     const renderer = new THREE.WebGLRenderer({
@@ -34,11 +32,9 @@ export default function Home() {
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
 
-    // Ajouter une lumière ambiante
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
     scene.add(ambientLight);
 
-    // Définition des lumières et des points
     const lightDefs = {
       point_1: {
         color: 0x07b2c5,
@@ -78,13 +74,13 @@ export default function Home() {
       },
       basicLight_1: {
         color: 0x07b2c5,
-        intensity: 30,
+        intensity: 0, // Éteindre initialement
         distance: 0,
         position: [8.94, 9.4, 9.91],
       },
       basicLight_2: {
         color: 0x07b2c5,
-        intensity: 30,
+        intensity: 0, // Éteindre initialement
         distance: 0,
         position: [8.94, 9.4, -2.86],
       },
@@ -96,7 +92,6 @@ export default function Home() {
       },
     };
 
-    // Définition des camPoints avec des positions numériques directes
     const camPointDefs = {
       camPoint_1: { position: { x: -0.02, y: 6, z: 0.2 } },
       camPoint_2: { position: { x: 2, y: 6, z: -9.2 } },
@@ -106,7 +101,6 @@ export default function Home() {
       camPoint_6: { position: { x: 5, y: 6, z: -11.44 } },
     };
 
-    // Définition des points intermédiaires avec des positions initiales
     const intermediatePoints = {
       intermediatePoint1: { position: { x: 1, y: 6, z: 3 }, color: 0x00ff00 },
       intermediatePoint2: {
@@ -124,10 +118,10 @@ export default function Home() {
     };
 
     const diamondPivots = {};
-    const clickableDiamonds = [];
+    const clickableDiamonds = {};
     const intermediatePointObjects = [];
+    const lights = {};
 
-    // Ajouter des lumières et des diamants pour chaque point
     Object.entries(lightDefs).forEach(([name, def]) => {
       const light = new THREE.PointLight(
         def.color,
@@ -136,6 +130,7 @@ export default function Home() {
       );
       light.position.set(...def.position);
       scene.add(light);
+      lights[name] = light;
 
       if (!["basicLight_1", "basicLight_2", "home"].includes(name)) {
         const pivot = new THREE.Object3D();
@@ -155,87 +150,42 @@ export default function Home() {
         diamond.position.set(0, -1, 0);
         diamond.scale.set(0.5, 0.5, 0.5);
         pivot.add(diamond);
-        clickableDiamonds.push(diamond);
+        clickableDiamonds[name] = diamond;
       }
     });
 
-    // Ajouter des points intermédiaires à la scène
     Object.entries(intermediatePoints).forEach(([name, def]) => {
       const geometry = new THREE.SphereGeometry(0.2);
-      const material = new THREE.MeshBasicMaterial({ color: def.color });
+      const material = new THREE.MeshBasicMaterial({
+        color: def.color,
+        transparent: true,
+        opacity: 0,
+      });
       const sphere = new THREE.Mesh(geometry, material);
       sphere.position.set(def.position.x, def.position.y, def.position.z);
       scene.add(sphere);
       intermediatePointObjects.push({ name, object: sphere });
     });
 
-    // Charger le modèle 3D
     new GLTFLoader().load("/models/Musee/scene_nolight.gltf", (gltf) => {
       scene.add(gltf.scene);
     });
 
-    // Configuration de lil-gui pour ajuster les positions des points intermédiaires
     const gui = new GUI();
-    const intermediatePointsFolder = gui.addFolder("Intermediate Points");
+    const folder = gui.addFolder("Intermediate Points");
     intermediatePointObjects.forEach(({ name, object }) => {
-      const folder = intermediatePointsFolder.addFolder(name);
-      folder.add(object.position, "x", -20, 20).name("X Position");
-      folder.add(object.position, "y", -20, 20).name("Y Position");
-      folder.add(object.position, "z", -20, 20).name("Z Position");
+      const f = folder.addFolder(name);
+      f.add(object.position, "x", -20, 20).name("X");
+      f.add(object.position, "y", -20, 20).name("Y");
+      f.add(object.position, "z", -20, 20).name("Z");
     });
 
-    // Créer une courbe Catmull-Rom à travers les points intermédiaires
-    const curvePoints = Object.values(intermediatePoints).map(
-      (def) => new THREE.Vector3(def.position.x, def.position.y, def.position.z)
-    );
-    const curve = new THREE.CatmullRomCurve3(curvePoints);
-    const curvePathPoints = curve.getPoints(50);
-
-    // Animer la caméra le long de la courbe
-    let currentPointIndex = 0;
-
-    function animateCameraAlongCurve() {
-      if (currentPointIndex < curvePathPoints.length) {
-        const point = curvePathPoints[currentPointIndex];
-        gsap.to(camera.position, {
-          x: point.x,
-          y: point.y,
-          z: point.z,
-          duration: 0.1,
-          ease: "power2.inOut",
-          onComplete: () => {
-            currentPointIndex++;
-            animateCameraAlongCurve();
-          },
-        });
-      } else {
-        // Une fois l'animation le long de la courbe terminée, ajuster la position et la cible de la caméra
-        gsap.to(camera.position, {
-          x: camPointDefs.camPoint_2.position.x,
-          y: camPointDefs.camPoint_2.position.y,
-          z: camPointDefs.camPoint_2.position.z,
-          duration: 1,
-          ease: "power2.inOut",
-        });
-
-        gsap.to(controls.target, {
-          x: lightDefs.point_2.position[0],
-          y: lightDefs.point_2.position[1],
-          z: lightDefs.point_2.position[2],
-          duration: 1,
-          ease: "power2.inOut",
-        });
-      }
-    }
-
-    // Animation de la caméra vers camPoint_1
     gsap.to(camera.position, {
       x: camPointDefs.camPoint_1.position.x,
       y: camPointDefs.camPoint_1.position.y,
       z: camPointDefs.camPoint_1.position.z,
       duration: 3,
       ease: "power2.inOut",
-      onComplete: animateCameraAlongCurve,
     });
 
     gsap.to(controls.target, {
@@ -246,41 +196,97 @@ export default function Home() {
       ease: "power2.inOut",
     });
 
-    // Raycaster pour les clics sur les points
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
 
     function onClick(event) {
+      // Calculer la position du clic en NDC
       const bounds = canvasRef.current.getBoundingClientRect();
       mouse.x = ((event.clientX - bounds.left) / bounds.width) * 2 - 1;
       mouse.y = -((event.clientY - bounds.top) / bounds.height) * 2 + 1;
 
+      // Lancer le raycaster et vérifier l'objet cliqué
       raycaster.setFromCamera(mouse, camera);
-      const intersects = raycaster.intersectObjects(clickableDiamonds);
+      const intersects = raycaster.intersectObjects(
+        Object.values(clickableDiamonds)
+      );
+      if (intersects.length === 0) return;
+      if (intersects[0].object.name !== "point_1") return;
 
-      if (intersects.length > 0) {
-        const clickedPoint = intersects[0].object.name;
-        const pointIndex = parseInt(clickedPoint.split("_")[1], 10);
-        const nextPointIndex = pointIndex < 6 ? pointIndex + 1 : 1;
-        const nextCamPoint = camPointDefs[`camPoint_${nextPointIndex}`];
-        const nextPoint = lightDefs[`point_${nextPointIndex}`];
+      const intermediatePoint1Position =
+        intermediatePoints.intermediatePoint1.position;
+      gsap.to(controls.target, {
+        x: intermediatePoint1Position.x,
+        y: intermediatePoint1Position.y,
+        z: intermediatePoint1Position.z,
+        duration: 1,
+        ease: "power2.inOut",
+        onUpdate: () => {
+          controls.update();
+        },
+        onComplete: () => {
+          const start = new THREE.Vector3(
+            camPointDefs.camPoint_1.position.x,
+            camPointDefs.camPoint_1.position.y,
+            camPointDefs.camPoint_1.position.z
+          );
+          const end = new THREE.Vector3(
+            camPointDefs.camPoint_2.position.x,
+            camPointDefs.camPoint_2.position.y,
+            camPointDefs.camPoint_2.position.z
+          );
+          const pathPoints = [
+            start,
+            ...intermediatePointObjects.map((ip) => ip.object.position.clone()),
+            end,
+          ];
+          const curve = new THREE.CatmullRomCurve3(pathPoints);
 
-        gsap.to(camera.position, {
-          x: nextCamPoint.position.x,
-          y: nextCamPoint.position.y,
-          z: nextCamPoint.position.z,
-          duration: 3,
-          ease: "power2.inOut",
-        });
+          const tweenObj = { t: 0 };
+          const totalDuration = (pathPoints.length - 1) * 2;
 
-        gsap.to(controls.target, {
-          x: nextPoint.position[0],
-          y: nextPoint.position[1],
-          z: nextPoint.position[2],
-          duration: 3,
-          ease: "power2.inOut",
-        });
-      }
+          gsap.to(tweenObj, {
+            t: 1,
+            duration: totalDuration,
+            ease: "power2.inOut",
+            onUpdate: () => {
+              const p = curve.getPoint(tweenObj.t);
+              camera.position.copy(p);
+
+              // Allumer les lumières pile entre intermediatePoint1 et intermediatePoint2
+              if (tweenObj.t > 0.1 && tweenObj.t < 0.3) {
+                // Ajustez ces valeurs pour cibler précisément entre 1 et 2
+                gsap.to([lights.basicLight_1, lights.basicLight_2], {
+                  intensity: 30,
+                  duration: 0.2,
+                  stagger: 0.03,
+                  ease: "power2.inOut",
+                });
+              }
+
+              if (tweenObj.t >= 0.7) {
+                const targetPosition = new THREE.Vector3(
+                  lightDefs.point_2.position[0],
+                  lightDefs.point_2.position[1],
+                  lightDefs.point_2.position[2]
+                );
+                controls.target.copy(targetPosition);
+              } else {
+                const lookP = curve.getPoint(
+                  Math.min(tweenObj.t + 0.02, 1 - 0.02)
+                );
+                controls.target.copy(lookP);
+              }
+
+              controls.update();
+            },
+            onComplete: () => {
+              camera.position.copy(end);
+              controls.update();
+            },
+          });
+        },
+      });
     }
 
     window.addEventListener("click", onClick);
@@ -302,7 +308,6 @@ export default function Home() {
     });
 
     return () => {
-      window.removeEventListener("resize", () => {});
       window.removeEventListener("click", onClick);
       gui.destroy();
     };
