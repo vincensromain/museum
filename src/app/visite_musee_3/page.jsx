@@ -286,9 +286,6 @@ export default function Home() {
       }
     };
     window.addEventListener("click", onClick);
-
-    // === Navigation verticale niveaux ===
-    // 1. Opacité à 0.27 pour tous + surligner lvl3
     gsap.set(
       lvlRefs.current.filter((r) => r),
       { opacity: 0.27 }
