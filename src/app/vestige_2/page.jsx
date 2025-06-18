@@ -89,7 +89,7 @@ export default function Vestige_1() {
     const loader = new GLTFLoader();
     let mixer;
     loader.load(
-      "/models/Dinos/Allosaurus.glb",
+      "/models/Dinos/Titanosaur.glb",
       (gltf) => {
         const model = gltf.scene;
         model.scale.set(0.2, 0.2, 0.2);
@@ -286,7 +286,7 @@ export default function Vestige_1() {
     localStorage.setItem("museumProgress", "2");
 
     // Retour vers la visite
-    router.push("/visite_musee_test");
+    router.push("/visite_musee_3");
   };
 
   return (
