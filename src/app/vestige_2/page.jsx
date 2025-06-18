@@ -89,7 +89,7 @@ export default function Vestige_1() {
     const loader = new GLTFLoader();
     let mixer;
     loader.load(
-      "/models/Dinos/Titanosaur.glb",
+      "/models/Dinos/Belemnites.glb",
       (gltf) => {
         const model = gltf.scene;
         model.scale.set(0.2, 0.2, 0.2);
