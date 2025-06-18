@@ -291,8 +291,6 @@ export default function Home() {
       { opacity: 0.27 }
     );
     if (lvlRefs.current[2]) gsap.set(lvlRefs.current[2], { opacity: 1 });
-
-    // 2. Handlers pour lvl1 (i=0), lvl2 (i=1) et lvl3 (i=2)
     const handlers = [];
     [0, 1, 2].forEach((i) => {
       const lvl = lvlRefs.current[i];

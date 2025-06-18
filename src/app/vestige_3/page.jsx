@@ -286,7 +286,7 @@ export default function Vestige_1() {
     localStorage.setItem("museumProgress", "2");
 
     // Retour vers la visite
-    router.push("/visite_musee_test");
+    router.push("/visite_musee_4");
   };
 
   return (
