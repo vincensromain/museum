@@ -42,7 +42,7 @@ export default function Vestige_1() {
     },
   ];
 
-  // 1) Initialisation du volume selon l'état global
+  // 1) Au montage, on initialise le volume selon isAudioOn
   useEffect(() => {
     const audio = narrationRef.current;
     if (!audio) return;
@@ -52,7 +52,7 @@ export default function Vestige_1() {
     audio.play().catch(() => {});
   }, []);
 
-  // 2) Écoute des futurs toggles (mute/unmute) sans pause
+  // 2) Écoute des toggles futurs pour mute/unmute en volume
   useEffect(() => {
     const audio = narrationRef.current;
     if (!audio) return;
@@ -64,6 +64,7 @@ export default function Vestige_1() {
         duration: 0.5,
         ease: "power1.inOut",
       });
+      // pas de pause(), juste volume à 0
     };
 
     window.addEventListener("toggleAudio", handleToggleAudio);
@@ -72,7 +73,7 @@ export default function Vestige_1() {
     };
   }, []);
 
-  // Hint drag GSAP
+  // 3) Hint drag
   useEffect(() => {
     gsap.fromTo(
       dragRef.current,
@@ -81,7 +82,7 @@ export default function Vestige_1() {
     );
   }, []);
 
-  // Three.js + GLTF Loader
+  // 4) Three.js + GLTF
   useEffect(() => {
     const canvas = canvasRef.current;
     const width = canvas.clientWidth;
@@ -132,7 +133,6 @@ export default function Vestige_1() {
         const model = gltf.scene;
         model.scale.set(10, 10, 10);
 
-        // Cercle shader
         const radius = 0.3;
         const discGeom = new THREE.CircleGeometry(radius, 32);
         const discMat = new THREE.ShaderMaterial({
@@ -205,7 +205,7 @@ export default function Vestige_1() {
     };
   }, []);
 
-  // Orb audio-réactive
+  // 5) Orb audio-réactive
   useEffect(() => {
     const container = orbRef.current;
     if (!container) return;
@@ -292,7 +292,7 @@ export default function Vestige_1() {
     };
   }, []);
 
-  // Synchronisation des sous-titres
+  // 6) Synchronisation des sous-titres
   useEffect(() => {
     const audio = narrationRef.current;
     let lastIdx = 0;
@@ -313,7 +313,7 @@ export default function Vestige_1() {
     return () => audio.removeEventListener("timeupdate", update);
   }, [captions]);
 
-  // Bouton “Retour”
+  // 7) Bouton “Retour”
   const handleReturn = () => {
     localStorage.setItem("pendingAdvance", "true");
     localStorage.setItem("museumProgress", "2");
