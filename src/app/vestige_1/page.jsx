@@ -89,10 +89,10 @@ export default function Vestige_1() {
     const loader = new GLTFLoader();
     let mixer;
     loader.load(
-      "/models/Dinos/Ammonite.glb",
+      "/models/Dinos/Rhabdodon.glb",
       (gltf) => {
         const model = gltf.scene;
-        model.scale.set(10, 10, 10);
+        model.scale.set(1, 1, 1);
 
         const radius = 0.2;
         const discGeom = new THREE.CircleGeometry(radius, 32);
