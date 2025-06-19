@@ -89,7 +89,7 @@ export default function LayoutClient({ children }) {
       <Loader />
       <audio
         ref={audioRef}
-        src="/Audios/audio.wav"
+        src="/Audios/Audio.mp3"
         loop
         autoPlay
         preload="auto"
