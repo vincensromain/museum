@@ -14,14 +14,17 @@ export default function LayoutClient({ children }) {
     const audio = audioRef.current;
     if (!audio) return;
 
+    // Initialiser le volume
     audio.volume = 0.1;
     audio.muted = true;
 
+    // Charger le temps sauvegardé
     const savedTime = localStorage.getItem("audio-current-time");
     if (savedTime) {
       audio.currentTime = parseFloat(savedTime);
     }
 
+    // Fonction pour jouer l'audio
     const playAudio = () => {
       audio
         .play()
@@ -35,6 +38,7 @@ export default function LayoutClient({ children }) {
 
     playAudio();
 
+    // Fonction pour activer le son après un clic
     const unmuteAndPlay = () => {
       audio.muted = false;
       audio
@@ -44,11 +48,13 @@ export default function LayoutClient({ children }) {
     };
     document.addEventListener("click", unmuteAndPlay, { once: true });
 
+    // Mettre à jour le temps dans le localStorage
     const onTimeUpdate = () => {
       localStorage.setItem("audio-current-time", audio.currentTime);
     };
     audio.addEventListener("timeupdate", onTimeUpdate);
 
+    // Gérer l'événement de toggle audio
     const handleToggleAudio = (event) => {
       const isOn = event.detail;
       gsap.to(audio, {
@@ -69,6 +75,7 @@ export default function LayoutClient({ children }) {
 
     window.addEventListener("toggleAudio", handleToggleAudio);
 
+    // Nettoyer les écouteurs d'événements
     return () => {
       document.removeEventListener("click", unmuteAndPlay);
       audio.removeEventListener("timeupdate", onTimeUpdate);
