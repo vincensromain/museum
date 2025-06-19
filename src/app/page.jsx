@@ -24,6 +24,12 @@ export default function Home() {
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [hasInteracted, setHasInteracted] = useState(false);
+  const [isAudioPlaying, setIsAudioPlaying] = useState(true);
+
+  const isAudioPlayingRef = useRef(isAudioPlaying);
+  const analyserRef = useRef(null);
+  const breatheTlRef = useRef(null);
+
   const router = useRouter();
   const { ctaLink, ctaLabel } = content.home;
 
@@ -49,6 +55,44 @@ export default function Home() {
       text: "Prenez votre temps, explorez à votre rythme et ouvrez l'œil. Ce que des fossiles ne disent pas au premier regard pourrait bien vous surprendre.",
     },
   ];
+
+  // Sync ref + pause/resume breathe timeline when audio state changes
+  useEffect(() => {
+    isAudioPlayingRef.current = isAudioPlaying;
+    if (breatheTlRef.current) {
+      if (isAudioPlaying) breatheTlRef.current.resume();
+      else breatheTlRef.current.pause();
+    }
+  }, [isAudioPlaying]);
+
+  // Setup AudioContext, GainNode & Analyser on first interaction
+  useEffect(() => {
+    const audioEl = narrationRef.current;
+    if (!audioEl) return;
+
+    const onFirstClick = () => {
+      setHasInteracted(true);
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      const audioContext = new AudioCtx();
+      const source = audioContext.createMediaElementSource(audioEl);
+      const gainNode = audioContext.createGain();
+      const analyser = audioContext.createAnalyser();
+
+      source.connect(gainNode);
+      gainNode.connect(analyser);
+      analyser.connect(audioContext.destination);
+
+      audioEl._gainNode = gainNode;
+      analyser.fftSize = 256;
+      analyserRef.current = analyser;
+
+      audioEl.play().catch(() => {});
+      document.removeEventListener("click", onFirstClick);
+    };
+
+    document.addEventListener("click", onFirstClick, { once: true });
+    return () => document.removeEventListener("click", onFirstClick);
+  }, []);
 
   // Drag CTA
   useEffect(() => {
@@ -84,7 +128,7 @@ export default function Home() {
     });
   }, [ctaLink, router]);
 
-  // Captions sync
+  // Sync captions with audio time
   useEffect(() => {
     const audio = narrationRef.current;
     if (!audio) return;
@@ -106,59 +150,7 @@ export default function Home() {
     return () => audio.removeEventListener("timeupdate", onTimeUpdate);
   }, [captions]);
 
-  // WebAudio + GainNode + analyser
-  useEffect(() => {
-    const audioElement = narrationRef.current;
-    if (!audioElement) return;
-
-    const onFirstClick = () => {
-      setHasInteracted(true);
-      const audioContext = new (window.AudioContext ||
-        window.webkitAudioContext)();
-      const source = audioContext.createMediaElementSource(audioElement);
-      const gainNode = audioContext.createGain();
-      const analyser = audioContext.createAnalyser();
-
-      source.connect(gainNode);
-      gainNode.connect(analyser);
-      analyser.connect(audioContext.destination);
-      audioElement._gainNode = gainNode;
-
-      analyser.fftSize = 256;
-      const bufferLength = analyser.frequencyBinCount;
-      const dataArray = new Uint8Array(bufferLength);
-
-      const animateOrb = () => {
-        requestAnimationFrame(animateOrb);
-        analyser.getByteFrequencyData(dataArray);
-        const avg = dataArray.reduce((a, b) => a + b, 0) / bufferLength;
-        // Mise à jour de l’orb :
-        // orbMesh.material.uniforms.glowInternalRadius.value = baseRadius + avg/30;
-      };
-      animateOrb();
-
-      audioElement.play().catch(() => {});
-      document.removeEventListener("click", onFirstClick);
-    };
-
-    document.addEventListener("click", onFirstClick, { once: true });
-    return () => document.removeEventListener("click", onFirstClick);
-  }, []);
-
-  // Restart narration
-  const restartNarration = () => {
-    const audio = narrationRef.current;
-    if (!audio || !hasInteracted) return;
-    setTimeout(() => {
-      setCurrentIndex(0);
-      audio.currentTime = 0;
-      audio
-        .play()
-        .catch((err) => console.warn("Erreur relance narration :", err));
-    }, 2000);
-  };
-
-  // Three.js scene & orb
+  // Three.js scene, orb, breathe timeline & audio-reactive render loop
   useEffect(() => {
     const container = orbContainerRef.current;
     if (!container) return;
@@ -170,6 +162,8 @@ export default function Home() {
       opacity: 1,
       glowColor: "#ccfbff",
     };
+    const baseRadius = glowParams.glowInternalRadius;
+
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(
       75,
@@ -194,10 +188,27 @@ export default function Home() {
 
     const breatheTl = gsap.timeline({ repeat: -1, yoyo: true });
     breatheTl.to(orbMesh.material.uniforms.glowInternalRadius, {
-      value: glowParams.glowInternalRadius + 1,
+      value: baseRadius + 1,
       duration: 1.1,
       ease: "sine.inOut",
     });
+    breatheTlRef.current = breatheTl;
+
+    const dataArray = new Uint8Array(
+      analyserRef.current?.frequencyBinCount || 128
+    );
+    const renderLoop = () => {
+      const analyser = analyserRef.current;
+      if (isAudioPlayingRef.current && analyser) {
+        analyser.getByteFrequencyData(dataArray);
+        const avg = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+        orbMesh.material.uniforms.glowInternalRadius.value =
+          baseRadius + avg / 30;
+      }
+      renderer.render(scene, camera);
+      requestAnimationFrame(renderLoop);
+    };
+    renderLoop();
 
     const onResize = () => {
       renderer.setSize(container.clientWidth, container.clientHeight);
@@ -205,12 +216,6 @@ export default function Home() {
       camera.updateProjectionMatrix();
     };
     window.addEventListener("resize", onResize);
-
-    const renderLoop = () => {
-      renderer.render(scene, camera);
-      requestAnimationFrame(renderLoop);
-    };
-    renderLoop();
 
     return () => {
       window.removeEventListener("resize", onResize);
@@ -221,9 +226,25 @@ export default function Home() {
     };
   }, []);
 
+  // Restart narration on end
+  const restartNarration = () => {
+    const audio = narrationRef.current;
+    if (!audio || !hasInteracted) return;
+    setTimeout(() => {
+      setCurrentIndex(0);
+      audio.currentTime = 0;
+      audio
+        .play()
+        .catch((err) => console.warn("Erreur relance narration :", err));
+    }, 2000);
+  };
+
   return (
     <main>
-      <AudioToggleButton />
+      <AudioToggleButton
+        isPlaying={isAudioPlaying}
+        onToggle={setIsAudioPlaying}
+      />
 
       <section className="home inside">
         <div className="narration">
