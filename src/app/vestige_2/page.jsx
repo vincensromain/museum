@@ -185,13 +185,21 @@ export default function Vestige_2() {
       modelUrl,
       (gltf) => {
         const model = gltf.scene;
-        model.scale.set(1, 1, 1);
+        model.scale.set(0.8, 0.8, 0.8);
 
         // Si c’est bien le Shastasaure, on le remet sur ses pattes
         if (modelUrl.endsWith("Shastasaure.glb")) {
           // 180° autour de l'axe X (ou Y/Z si besoin)
-          model.rotation.x = Math.PI;
+          model.rotation.x = Math.PI / 2;
+          model.position.set(0, 2.5, 0);
+        } else if (modelUrl.endsWith("Belemnites.glb")) {
+          model.rotation.x = Math.PI / 2;
+          model.position.set(0, 1, 0);
         }
+
+        // Ajoutez le modèle à la scène
+        scene.add(model);
+        currentModelRef.current = model;
 
         // Disque shader
         const radius = 3;
@@ -224,13 +232,13 @@ export default function Vestige_2() {
             }
           `,
         });
+
         const disc = new THREE.Mesh(discGeom, discMat);
         disc.rotation.x = -Math.PI / 2;
         disc.position.y = 0.01;
-        model.add(disc);
 
-        scene.add(model);
-        currentModelRef.current = model;
+        // Ajoutez le disque directement à la scène, pas au modèle
+        scene.add(disc);
 
         // Animations
         if (gltf.animations?.length) {
