@@ -14,7 +14,6 @@ import Orb from "../components/Orb/Orb";
 export default function Vestige_1() {
   const router = useRouter();
   const [hasInteracted, setHasInteracted] = useState(false);
-  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
 
   // URL du modèle actif
   const [modelUrl, setModelUrl] = useState("/models/Dinos/Ammonite.glb");
@@ -80,16 +79,7 @@ export default function Vestige_1() {
       try {
         const isOn = JSON.parse(localStorage.getItem("isAudioOn") ?? "true");
         audio.volume = isOn ? 1 : 0;
-
-        // Ajoutez des écouteurs d'événements pour le débogage
-        audio.addEventListener("play", () => console.log("Audio joué"));
-        audio.addEventListener("pause", () => console.log("Audio en pause"));
-        audio.addEventListener("error", (e) =>
-          console.error("Erreur audio:", e)
-        );
-
         await audio.play();
-        setIsAudioPlaying(true);
       } catch (err) {
         console.error("Erreur lors de la lecture audio:", err);
       }
@@ -438,21 +428,6 @@ export default function Vestige_1() {
       <div className="model_canvas_container">
         <canvas ref={canvasRef} className="model_canvas" />
       </div>
-
-      {isAudioPlaying && (
-        <div
-          style={{
-            position: "absolute",
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
-            width: "100px",
-            height: "300px",
-            backgroundColor: "rgba(0, 255, 0, 0.5)",
-            zIndex: 99999,
-          }}
-        ></div>
-      )}
     </section>
   );
 }
