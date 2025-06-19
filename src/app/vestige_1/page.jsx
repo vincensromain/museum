@@ -14,6 +14,7 @@ import Orb from "../components/Orb/Orb";
 export default function Vestige_1() {
   const router = useRouter();
   const [hasInteracted, setHasInteracted] = useState(false);
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
 
   // URL du modèle actif
   const [modelUrl, setModelUrl] = useState("/models/Dinos/Ammonite.glb");
@@ -50,25 +51,23 @@ export default function Vestige_1() {
     },
   ];
 
-  // Ajoutez un gestionnaire d'événements pour les interactions
+  // Ajoutez un gestionnaire d'événements pour les interactions tactiles
   useEffect(() => {
     const handleInteraction = () => {
       setHasInteracted(true);
-      // Supprimez les écouteurs d'événements après la première interaction
-      document.removeEventListener("click", handleInteraction);
       document.removeEventListener("touchstart", handleInteraction);
+      document.removeEventListener("click", handleInteraction);
     };
 
-    // Ajoutez les écouteurs d'événements pour les clics et les touchers
-    document.addEventListener("click", handleInteraction);
+    // Priorité aux événements tactiles pour mobile
     document.addEventListener("touchstart", handleInteraction, {
       passive: true,
     });
+    document.addEventListener("click", handleInteraction);
 
-    // Nettoyez les écouteurs d'événements lorsque le composant est démonté
     return () => {
-      document.removeEventListener("click", handleInteraction);
       document.removeEventListener("touchstart", handleInteraction);
+      document.removeEventListener("click", handleInteraction);
     };
   }, []);
 
@@ -82,6 +81,7 @@ export default function Vestige_1() {
         const isOn = JSON.parse(localStorage.getItem("isAudioOn") ?? "true");
         audio.volume = isOn ? 1 : 0;
         await audio.play();
+        setIsAudioPlaying(true); // Mettre à jour l'état lorsque l'audio est joué
       } catch (err) {
         console.error("Erreur lors de la lecture audio:", err);
       }
@@ -430,6 +430,21 @@ export default function Vestige_1() {
       <div className="model_canvas_container">
         <canvas ref={canvasRef} className="model_canvas" />
       </div>
+
+      {isAudioPlaying && (
+        <div
+          style={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            width: "100px",
+            height: "300px",
+            backgroundColor: "rgba(0, 255, 0, 0.5)",
+            zIndex: 99999,
+          }}
+        ></div>
+      )}
     </section>
   );
 }
