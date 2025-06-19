@@ -304,11 +304,11 @@ export default function Vestige_1() {
         <span className="go_back_text">Retour</span>
       </div>
       <Skin />
+      <div className="naration_orb" ref={orbRef}></div>
       <div ref={dragRef} className="svg_drag">
         <IconMuseum icon="svgDrag" />
       </div>
       <div className="naration_text_content">
-        <div className="naration_orb" ref={orbRef}></div>
         <div className="naration_text">
           <audio
             ref={narrationRef}
