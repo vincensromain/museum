@@ -189,9 +189,9 @@ export default function Vestige_5() {
       modelUrl,
       (gltf) => {
         const model = gltf.scene;
-        model.scale.set(2, 2, 2);
+        model.scale.set(1.3, 1.3, 1.3);
         if (modelUrl.endsWith("Allosaurus.glb")) {
-          model.scale.set(0.2, 0.2, 0.2);
+          model.scale.set(0.26, 0.26, 0.26);
         }
 
         // Ajoutez le modèle à la scène
