@@ -14,7 +14,6 @@ export default function LayoutClient({ children }) {
     const audio = audioRef.current;
     if (!audio) return;
 
-    // ✅ Volume initial à 0.1
     audio.volume = 0.1;
     audio.muted = true;
 
@@ -50,25 +49,19 @@ export default function LayoutClient({ children }) {
     };
     audio.addEventListener("timeupdate", onTimeUpdate);
 
-    // ✅ Ne jamais dépasser 0.1 pour audio.wav
     const handleToggleAudio = (event) => {
       const isOn = event.detail;
-      const targetVolume = 0.1;
-
       gsap.to(audio, {
-        volume: isOn ? targetVolume : 0,
+        volume: isOn ? 0.1 : 0,
         duration: 0.5,
         ease: "power1.inOut",
-        onStart: () => {
-          if (isOn) {
-            audio
-              .play()
-              .catch((err) => console.warn("Error playing audio:", err));
-          }
-        },
         onComplete: () => {
           if (!isOn) {
             audio.pause();
+          } else {
+            audio
+              .play()
+              .catch((err) => console.warn("Error playing audio:", err));
           }
         },
       });
@@ -96,15 +89,11 @@ export default function LayoutClient({ children }) {
         muted
         style={{ display: "none" }}
       />
-
       <Noise />
-
       <AppearRef delay={0.2}>
         <LogoHeader />
       </AppearRef>
-
       {children}
-
       <AudioToggleButton />
     </>
   );
