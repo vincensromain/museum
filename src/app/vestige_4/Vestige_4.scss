@@ -37,7 +37,7 @@ $gradient-variant-1: linear-gradient(
   .skin {
     position: absolute;
     top: 40%;
-    left: 80%;
+    left: 65%;
     z-index: 999999;
     .skin_container {
       display: flex;
@@ -98,7 +98,7 @@ $gradient-variant-1: linear-gradient(
         font-size: 20px;
         color: rgb(255, 255, 255);
         opacity: 0.6;
-        width: 80%;
+        width: 90%;
         top: -80px;
         opacity: 0;
         transition: opacity 0.3s ease-in-out;
