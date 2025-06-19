@@ -13,7 +13,7 @@ import Orb from "../components/Orb/Orb";
 
 export default function Vestige_1() {
   const router = useRouter();
-  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+  const [audioContext, setAudioContext] = useState(null);
 
   // URL du modèle actif
   const [modelUrl, setModelUrl] = useState("/models/Dinos/Ammonite.glb");
@@ -56,8 +56,10 @@ export default function Vestige_1() {
 
     const playAudio = async () => {
       try {
+        const newAudioContext = new (window.AudioContext ||
+          window.webkitAudioContext)();
+        setAudioContext(newAudioContext);
         await audio.play();
-        setIsAudioPlaying(true);
       } catch (err) {
         console.error("Erreur lors de la lecture audio:", err);
       }
@@ -237,6 +239,83 @@ export default function Vestige_1() {
     );
   }, [modelUrl]);
 
+  // Orb audio-réactive
+  useEffect(() => {
+    const container = orbRef.current;
+    const audioEl = narrationRef.current;
+    if (!container || !audioEl || !audioContext) return;
+
+    const glowParams = {
+      falloff: 0.1,
+      glowInternalRadius: 6,
+      glowSharpness: 0.5,
+      opacity: 1,
+      glowColor: "#ccfbff",
+    };
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(
+      75,
+      container.clientWidth / container.clientHeight,
+      0.1,
+      100
+    );
+    camera.position.set(0, 0, 2.5);
+    scene.add(camera);
+
+    const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    container.appendChild(renderer.domElement);
+
+    const orbMesh = Orb({
+      position: new THREE.Vector3(0, 0, 0),
+      glowParams,
+      scene,
+    });
+    orbMesh.scale.multiplyScalar(6);
+
+    gsap
+      .timeline({ repeat: -1, yoyo: true })
+      .to(orbMesh.material.uniforms.glowInternalRadius, {
+        value: glowParams.glowInternalRadius + 1,
+        duration: 1.1,
+        ease: "sine.inOut",
+      });
+
+    const analyser = audioContext.createAnalyser();
+    const source = audioContext.createMediaElementSource(audioEl);
+    source.connect(analyser);
+    analyser.connect(audioContext.destination);
+    analyser.fftSize = 256;
+    const dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+    const animateOrb = () => {
+      requestAnimationFrame(animateOrb);
+      analyser.getByteFrequencyData(dataArray);
+      const avg = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+      orbMesh.material.uniforms.glowInternalRadius.value =
+        glowParams.glowInternalRadius + avg / 30;
+      renderer.render(scene, camera);
+    };
+    animateOrb();
+
+    const onResize = () => {
+      renderer.setSize(container.clientWidth, container.clientHeight);
+      camera.aspect = container.clientWidth / container.clientHeight;
+      camera.updateProjectionMatrix();
+    };
+    window.addEventListener("resize", onResize);
+
+    return () => {
+      window.removeEventListener("resize", onResize);
+      container.removeChild(renderer.domElement);
+      orbMesh.geometry.dispose();
+      orbMesh.material.dispose();
+      renderer.dispose();
+    };
+  }, [audioContext]);
+
   // Retour
   const handleReturn = () => {
     localStorage.setItem("pendingAdvance", "true");
@@ -308,7 +387,7 @@ export default function Vestige_1() {
         onClick={handlePlayAudio}
         style={{
           position: "absolute",
-          top: "20px",
+          top: "50%",
           left: "50%",
           transform: "translateX(-50%)",
           zIndex: 1000,
@@ -316,21 +395,6 @@ export default function Vestige_1() {
       >
         Jouer l'audio
       </button>
-
-      {isAudioPlaying && (
-        <div
-          style={{
-            position: "absolute",
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
-            width: "100px",
-            height: "300px",
-            backgroundColor: "rgba(0, 255, 0, 0.5)",
-            zIndex: 99999,
-          }}
-        ></div>
-      )}
     </section>
   );
 }
