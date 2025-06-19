@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",
+    "@loaders.gl/draco": "^4.3.3",
     "@studio-freight/react-lenis": "^0.0.47",
     "@types/three": "^0.176.0",
     "gsap": "^3.12.7",
