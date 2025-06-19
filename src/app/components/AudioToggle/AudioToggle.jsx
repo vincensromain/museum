@@ -1,57 +1,49 @@
+// components/AudioToggle/AudioToggle.jsx
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import { gsap } from "gsap";
-import AudioAnimatedIcon from "../AudioAnimatedIcon/AudioAnimatedIcon"; // ajuste le chemin si besoin
+import AudioAnimatedIcon from "../AudioAnimatedIcon/AudioAnimatedIcon";
 import "./AudioToggle.scss";
 
-export default function AudioToggleButton() {
-  const [isPlaying, setIsPlaying] = useState(true);
+export default function AudioToggleButton({ isPlaying, onToggle }) {
+  const handleToggle = () => {
+    const nextState = !isPlaying;
+    const audios = document.querySelectorAll("audio");
 
-  const toggleAudio = () => {
-    setIsPlaying((prev) => {
-      const nextState = !prev;
-      const audios = document.querySelectorAll("audio");
+    audios.forEach((audio) => {
+      const src = audio.currentSrc || audio.src;
+      const isWav = src.toLowerCase().endsWith(".wav");
+      const targetVolume = !nextState ? 0 : isWav ? 0.1 : 1;
+      const gainNode = audio._gainNode;
 
-      audios.forEach((audio) => {
-        // Détection du type de fichier
-        const src = audio.currentSrc || audio.src;
-        const isWav = src.toLowerCase().endsWith(".wav");
+      if (gainNode) {
+        gsap.to(gainNode.gain, {
+          value: targetVolume,
+          duration: 0.5,
+          ease: "power1.inOut",
+        });
+      } else {
+        gsap.to(audio, {
+          volume: targetVolume,
+          duration: 0.5,
+          ease: "power1.inOut",
+        });
+      }
 
-        // Volume cible : 0 si on mute, sinon 0.1 pour WAV et 1 pour les autres
-        const targetVolume = !nextState ? 0 : isWav ? 0.1 : 1;
-
-        // Si on a un GainNode attaché, anime sa valeur, sinon anime audio.volume
-        const gainNode = audio._gainNode;
-        if (gainNode) {
-          gsap.to(gainNode.gain, {
-            value: targetVolume,
-            duration: 0.5,
-            ease: "power1.inOut",
-          });
-        } else {
-          gsap.to(audio, {
-            volume: targetVolume,
-            duration: 0.5,
-            ease: "power1.inOut",
-          });
-        }
-
-        // Relance la lecture si on réactive le son
-        if (nextState) {
-          audio.play().catch((err) => console.warn("Playback error:", err));
-        }
-      });
-
-      return nextState;
+      if (nextState) {
+        audio.play().catch((err) => console.warn("Playback error:", err));
+      }
     });
+
+    onToggle(nextState);
   };
 
   return (
     <button
       type="button"
       className="audio_toggle_btn"
-      onClick={toggleAudio}
+      onClick={handleToggle}
       aria-label={isPlaying ? "Couper le son" : "Activer le son"}
     >
       <AudioAnimatedIcon isPlaying={isPlaying} />

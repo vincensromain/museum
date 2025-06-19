@@ -1,4 +1,4 @@
-// app/page.jsx (ou pages/index.jsx selon ta config)
+// app/page.jsx
 "use client";
 
 import React, { useRef, useEffect, useState } from "react";
@@ -26,6 +26,7 @@ export default function Home() {
   const [hasInteracted, setHasInteracted] = useState(false);
   const [isAudioPlaying, setIsAudioPlaying] = useState(true);
 
+  // Permet d'accéder toujours à la dernière valeur dans la boucle Three.js
   const isAudioPlayingRef = useRef(isAudioPlaying);
   const analyserRef = useRef(null);
   const breatheTlRef = useRef(null);
@@ -56,16 +57,17 @@ export default function Home() {
     },
   ];
 
-  // Sync ref + pause/resume breathe timeline when audio state changes
+  // Dès que isAudioPlaying change, on met à jour la ref et on pause/resume le breatheTl
   useEffect(() => {
     isAudioPlayingRef.current = isAudioPlaying;
     if (breatheTlRef.current) {
-      if (isAudioPlaying) breatheTlRef.current.resume();
-      else breatheTlRef.current.pause();
+      isAudioPlaying
+        ? breatheTlRef.current.resume()
+        : breatheTlRef.current.pause();
     }
   }, [isAudioPlaying]);
 
-  // Setup AudioContext, GainNode & Analyser on first interaction
+  // Initialisation du contexte audio au premier clic
   useEffect(() => {
     const audioEl = narrationRef.current;
     if (!audioEl) return;
@@ -128,7 +130,7 @@ export default function Home() {
     });
   }, [ctaLink, router]);
 
-  // Sync captions with audio time
+  // Synchronisation des sous-titres
   useEffect(() => {
     const audio = narrationRef.current;
     if (!audio) return;
@@ -150,7 +152,7 @@ export default function Home() {
     return () => audio.removeEventListener("timeupdate", onTimeUpdate);
   }, [captions]);
 
-  // Three.js scene, orb, breathe timeline & audio-reactive render loop
+  // Three.js + orb + animation "respiration" + boucle réactive audio
   useEffect(() => {
     const container = orbContainerRef.current;
     if (!container) return;
@@ -186,6 +188,7 @@ export default function Home() {
     });
     orbMesh.scale.multiplyScalar(6);
 
+    // Timeline de "respiration"
     const breatheTl = gsap.timeline({ repeat: -1, yoyo: true });
     breatheTl.to(orbMesh.material.uniforms.glowInternalRadius, {
       value: baseRadius + 1,
@@ -194,9 +197,9 @@ export default function Home() {
     });
     breatheTlRef.current = breatheTl;
 
-    const dataArray = new Uint8Array(
-      analyserRef.current?.frequencyBinCount || 128
-    );
+    // Boucle de rendu + visualisation
+    const fftSize = analyserRef.current?.frequencyBinCount || 128;
+    const dataArray = new Uint8Array(fftSize);
     const renderLoop = () => {
       const analyser = analyserRef.current;
       if (isAudioPlayingRef.current && analyser) {
@@ -226,7 +229,7 @@ export default function Home() {
     };
   }, []);
 
-  // Restart narration on end
+  // Redémarrage de la narration
   const restartNarration = () => {
     const audio = narrationRef.current;
     if (!audio || !hasInteracted) return;
