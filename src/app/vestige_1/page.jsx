@@ -80,8 +80,16 @@ export default function Vestige_1() {
       try {
         const isOn = JSON.parse(localStorage.getItem("isAudioOn") ?? "true");
         audio.volume = isOn ? 1 : 0;
+
+        // Ajoutez des écouteurs d'événements pour le débogage
+        audio.addEventListener("play", () => console.log("Audio joué"));
+        audio.addEventListener("pause", () => console.log("Audio en pause"));
+        audio.addEventListener("error", (e) =>
+          console.error("Erreur audio:", e)
+        );
+
         await audio.play();
-        setIsAudioPlaying(true); // Mettre à jour l'état lorsque l'audio est joué
+        setIsAudioPlaying(true);
       } catch (err) {
         console.error("Erreur lors de la lecture audio:", err);
       }
