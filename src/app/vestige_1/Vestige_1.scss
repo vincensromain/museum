@@ -69,15 +69,14 @@ $gradient-variant-1: linear-gradient(
     display: flex;
     justify-content: center;
     align-items: center;
-    background-color: white;
-    opacity: 0.3;
+    background-color: rgba(255, 255, 255, 0.383);
     backdrop-filter: blur(10px);
+    z-index: 999999;
+    transform: translate(-50%, -50%);
     .play_audio {
-      transform: translate(-50%, -50%);
       border-radius: 27px;
       padding: 7.5px 21.5px;
       background-color: #18262876;
-      z-index: 9999;
       cursor: pointer;
       color: #8cd1d7;
       font-size: 14px;
