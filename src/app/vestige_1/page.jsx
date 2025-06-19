@@ -9,20 +9,27 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
 import "./Vestige_1.scss";
 import IconMuseum from "../components/IconsMuseum/IconsMuseum";
-import Skin from "../components/Skin/Skin";
 import Orb from "../components/Orb/Orb";
 
 export default function Vestige_1() {
-  const dragRef = useRef(null);
-  const canvasRef = useRef(null);
-  const orbRef = useRef(null);
-  const narrationRef = useRef(null);
-  const audioContextRef = useRef(null);
-  const audioSourceRef = useRef(null);
   const router = useRouter();
 
+  // URL du modèle actif
+  const [modelUrl, setModelUrl] = useState("/models/Dinos/Ammonite.glb");
+  // Index du sous-titre actif
   const [currentIndex, setCurrentIndex] = useState(0);
 
+  const canvasRef = useRef(null);
+  const dragRef = useRef(null);
+  const orbRef = useRef(null);
+  const narrationRef = useRef(null);
+
+  // Réfs Three.js
+  const sceneRef = useRef();
+  const mixerRef = useRef();
+  const currentModelRef = useRef();
+
+  // Données des sous-titres
   const captions = [
     {
       time: 0.24,
@@ -42,47 +49,43 @@ export default function Vestige_1() {
     },
   ];
 
-  // 1) Au montage, on initialise le volume selon isAudioOn
+  // 1) Audio : volume initial puis lecture
   useEffect(() => {
     const audio = narrationRef.current;
     if (!audio) return;
-
     const isOn = JSON.parse(localStorage.getItem("isAudioOn") ?? "true");
     audio.volume = isOn ? 1 : 0;
     audio.play().catch(() => {});
   }, []);
 
-  // 2) Écoute des toggles futurs pour mute/unmute en volume
+  // 2) Écoute du toggleAudio pour mute/unmute en fondu
   useEffect(() => {
     const audio = narrationRef.current;
     if (!audio) return;
-
-    const handleToggleAudio = (event) => {
-      const isOn = event.detail;
+    const handleToggle = (e) => {
+      const isOn = e.detail;
       gsap.to(audio, {
         volume: isOn ? 1 : 0,
         duration: 0.5,
         ease: "power1.inOut",
       });
-      // pas de pause(), juste volume à 0
     };
-
-    window.addEventListener("toggleAudio", handleToggleAudio);
-    return () => {
-      window.removeEventListener("toggleAudio", handleToggleAudio);
-    };
+    window.addEventListener("toggleAudio", handleToggle);
+    return () => window.removeEventListener("toggleAudio", handleToggle);
   }, []);
 
   // 3) Hint drag
   useEffect(() => {
-    gsap.fromTo(
-      dragRef.current,
-      { x: -10 },
-      { x: 10, duration: 1, ease: "power3.inOut", repeat: -1, yoyo: true }
-    );
+    if (dragRef.current) {
+      gsap.fromTo(
+        dragRef.current,
+        { x: -10 },
+        { x: 10, duration: 1, ease: "power3.inOut", repeat: -1, yoyo: true }
+      );
+    }
   }, []);
 
-  // 4) Three.js + GLTF
+  // 4) Initialisation Three.js (scene, caméra, renderer, controls)
   useEffect(() => {
     const canvas = canvasRef.current;
     const width = canvas.clientWidth;
@@ -97,6 +100,8 @@ export default function Vestige_1() {
     renderer.setPixelRatio(window.devicePixelRatio);
 
     const scene = new THREE.Scene();
+    sceneRef.current = scene;
+
     const camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 1000);
     camera.position.set(0, 3, 6);
     camera.lookAt(0, 0, 0);
@@ -115,24 +120,70 @@ export default function Vestige_1() {
       (camera.position.y - controls.target.y) /
         camera.position.distanceTo(controls.target)
     );
-    controls.minPolarAngle = initialPolar;
-    controls.maxPolarAngle = initialPolar;
+    controls.minPolarAngle = controls.maxPolarAngle = initialPolar;
     controls.maxDistance = camera.position.distanceTo(controls.target);
-
     controls.addEventListener("start", () => {
-      if (dragRef.current) {
+      if (dragRef.current)
         gsap.to(dragRef.current, { opacity: 0, duration: 0.5 });
-      }
     });
 
-    let mixer;
+    const onResize = () => {
+      const w = canvas.clientWidth,
+        h = canvas.clientHeight;
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, h);
+    };
+    window.addEventListener("resize", onResize);
+
+    const clock = new THREE.Clock();
+    const animate = () => {
+      requestAnimationFrame(animate);
+      const delta = clock.getDelta();
+      if (mixerRef.current) mixerRef.current.update(delta);
+      controls.update();
+      renderer.render(scene, camera);
+    };
+    animate();
+
+    return () => {
+      window.removeEventListener("resize", onResize);
+      controls.dispose();
+      renderer.dispose();
+      scene.clear();
+    };
+  }, []);
+
+  // 5) Chargement dynamique du modèle (normal OU éclaté)
+  useEffect(() => {
+    const scene = sceneRef.current;
+    if (!scene) return;
+
+    // Purge de l’ancien modèle
+    if (currentModelRef.current) {
+      scene.remove(currentModelRef.current);
+      currentModelRef.current.traverse((child) => {
+        if (child.geometry) child.geometry.dispose();
+        if (child.material) {
+          if (Array.isArray(child.material)) {
+            child.material.forEach((mat) => mat.dispose());
+          } else {
+            child.material.dispose();
+          }
+        }
+      });
+      currentModelRef.current = null;
+    }
+
+    // Chargement du nouveau
     const loader = new GLTFLoader();
     loader.load(
-      "/models/Dinos/Ammonite.glb",
+      modelUrl,
       (gltf) => {
         const model = gltf.scene;
         model.scale.set(10, 10, 10);
 
+        // Disque shader
         const radius = 0.3;
         const discGeom = new THREE.CircleGeometry(radius, 32);
         const discMat = new THREE.ShaderMaterial({
@@ -169,46 +220,26 @@ export default function Vestige_1() {
         model.add(disc);
 
         scene.add(model);
+        currentModelRef.current = model;
+
+        // Animations
         if (gltf.animations?.length) {
-          mixer = new THREE.AnimationMixer(model);
-          gltf.animations.forEach((clip) => mixer.clipAction(clip).play());
+          mixerRef.current = new THREE.AnimationMixer(model);
+          gltf.animations.forEach((clip) =>
+            mixerRef.current.clipAction(clip).play()
+          );
         }
       },
       undefined,
-      (error) => console.error("Error loading GLTF:", error)
+      (err) => console.error("Erreur chargement GLTF :", err)
     );
+  }, [modelUrl]);
 
-    const onWindowResize = () => {
-      const w = canvas.clientWidth;
-      const h = canvas.clientHeight;
-      camera.aspect = w / h;
-      camera.updateProjectionMatrix();
-      renderer.setSize(w, h);
-    };
-    window.addEventListener("resize", onWindowResize);
-
-    const clock = new THREE.Clock();
-    const animate = () => {
-      requestAnimationFrame(animate);
-      const delta = clock.getDelta();
-      if (mixer) mixer.update(delta);
-      controls.update();
-      renderer.render(scene, camera);
-    };
-    animate();
-
-    return () => {
-      window.removeEventListener("resize", onWindowResize);
-      controls.dispose();
-      renderer.dispose();
-      scene.clear();
-    };
-  }, []);
-
-  // 5) Orb audio-réactive
+  // 6) Orb audio-réactive
   useEffect(() => {
     const container = orbRef.current;
-    if (!container) return;
+    const audioEl = narrationRef.current;
+    if (!container || !audioEl) return;
 
     const glowParams = {
       falloff: 0.1,
@@ -240,41 +271,34 @@ export default function Vestige_1() {
     });
     orbMesh.scale.multiplyScalar(6);
 
-    const breatheTl = gsap.timeline({ repeat: -1, yoyo: true });
-    breatheTl.to(orbMesh.material.uniforms.glowInternalRadius, {
-      value: glowParams.glowInternalRadius + 1,
-      duration: 1.1,
-      ease: "sine.inOut",
-    });
+    gsap
+      .timeline({ repeat: -1, yoyo: true })
+      .to(orbMesh.material.uniforms.glowInternalRadius, {
+        value: glowParams.glowInternalRadius + 1,
+        duration: 1.1,
+        ease: "sine.inOut",
+      });
 
-    if (!audioContextRef.current) {
-      audioContextRef.current = new (window.AudioContext ||
-        window.webkitAudioContext)();
-    }
-    const audioContext = audioContextRef.current;
-    const audioElement = narrationRef.current;
+    const audioContext = new (window.AudioContext ||
+      window.webkitAudioContext)();
+    const analyser = audioContext.createAnalyser();
+    const source = audioContext.createMediaElementSource(audioEl);
+    source.connect(analyser);
+    analyser.connect(audioContext.destination);
+    analyser.fftSize = 256;
+    const dataArray = new Uint8Array(analyser.frequencyBinCount);
 
-    if (!audioSourceRef.current) {
-      audioSourceRef.current =
-        audioContext.createMediaElementSource(audioElement);
-      const analyser = audioContext.createAnalyser();
-      audioSourceRef.current.connect(analyser);
-      analyser.connect(audioContext.destination);
-      analyser.fftSize = 256;
+    const animateOrb = () => {
+      requestAnimationFrame(animateOrb);
+      analyser.getByteFrequencyData(dataArray);
+      const avg = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+      orbMesh.material.uniforms.glowInternalRadius.value =
+        glowParams.glowInternalRadius + avg / 30;
+      renderer.render(scene, camera);
+    };
+    animateOrb();
 
-      const dataArray = new Uint8Array(analyser.frequencyBinCount);
-      const animateOrb = () => {
-        requestAnimationFrame(animateOrb);
-        analyser.getByteFrequencyData(dataArray);
-        const avg = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
-        orbMesh.material.uniforms.glowInternalRadius.value =
-          glowParams.glowInternalRadius + avg / 30;
-        renderer.render(scene, camera);
-      };
-      animateOrb();
-    }
-
-    audioElement.play().catch((e) => console.warn("Autoplay blocked:", e));
+    audioEl.play().catch(() => {});
 
     const onResize = () => {
       renderer.setSize(container.clientWidth, container.clientHeight);
@@ -292,9 +316,10 @@ export default function Vestige_1() {
     };
   }, []);
 
-  // 6) Synchronisation des sous-titres
+  // 7) Synchronisation des sous-titres
   useEffect(() => {
     const audio = narrationRef.current;
+    if (!audio) return;
     let lastIdx = 0;
     const findIdx = (t) => {
       for (let i = captions.length - 1; i >= 0; i--) {
@@ -311,14 +336,18 @@ export default function Vestige_1() {
     };
     audio.addEventListener("timeupdate", update);
     return () => audio.removeEventListener("timeupdate", update);
-  }, [captions]);
+  }, []);
 
-  // 7) Bouton “Retour”
+  // 8) Retour
   const handleReturn = () => {
     localStorage.setItem("pendingAdvance", "true");
     localStorage.setItem("museumProgress", "2");
     router.push("/visite_musee_2");
   };
+
+  // 9) Vues normal / éclatée
+  const handleNormal = () => setModelUrl("/models/Dinos/Ammonite.glb");
+  const handleEclate = () => setModelUrl("/models/Dinos/Ammonite_cut.glb");
 
   return (
     <section className="vestige">
@@ -327,12 +356,31 @@ export default function Vestige_1() {
         <span className="go_back_text">Retour</span>
       </div>
 
-      <Skin />
-
       <div className="naration_orb" ref={orbRef}></div>
 
       <div ref={dragRef} className="svg_drag">
         <IconMuseum icon="svgDrag" />
+      </div>
+
+      <div className="skin">
+        <div className="skin_container">
+          <div
+            className={`skin_btn ${
+              modelUrl.endsWith("Ammonite.glb") ? "active" : ""
+            }`}
+            onClick={handleNormal}
+          >
+            Vue normal
+          </div>
+          <div
+            className={`skin_btn ${
+              modelUrl.endsWith("Ammonite_cut.glb") ? "active" : ""
+            }`}
+            onClick={handleEclate}
+          >
+            Vue éclatée
+          </div>
+        </div>
       </div>
 
       <div className="naration_text_content">
