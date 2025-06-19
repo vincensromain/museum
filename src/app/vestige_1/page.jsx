@@ -44,13 +44,41 @@ export default function Vestige_1() {
     },
   ];
 
+  // → Écoute globale du toggle audio
+  useEffect(() => {
+    const audio = narrationRef.current;
+    if (!audio) return;
+
+    const handleToggleAudio = (event) => {
+      const isOn = event.detail;
+      gsap.to(audio, {
+        volume: isOn ? 1 : 0,
+        duration: 0.5,
+        ease: "power1.inOut",
+        onComplete: () => {
+          if (!isOn) audio.pause();
+          else audio.play().catch(() => {});
+        },
+      });
+    };
+
+    window.addEventListener("toggleAudio", handleToggleAudio);
+    return () => {
+      window.removeEventListener("toggleAudio", handleToggleAudio);
+    };
+  }, []);
+
+  // Animation du drag hint
   useEffect(() => {
     gsap.fromTo(
       dragRef.current,
       { x: -10 },
       { x: 10, duration: 1, ease: "power3.inOut", repeat: -1, yoyo: true }
     );
+  }, []);
 
+  // Setup du canvas Three.js + GLTF
+  useEffect(() => {
     const canvas = canvasRef.current;
     const width = canvas.clientWidth;
     const height = canvas.clientHeight;
@@ -85,9 +113,7 @@ export default function Vestige_1() {
     );
     controls.minPolarAngle = initialPolar;
     controls.maxPolarAngle = initialPolar;
-
-    const initialDistance = camera.position.distanceTo(controls.target);
-    controls.maxDistance = initialDistance;
+    controls.maxDistance = camera.position.distanceTo(controls.target);
 
     controls.addEventListener("start", () => {
       if (dragRef.current)
@@ -102,6 +128,7 @@ export default function Vestige_1() {
         const model = gltf.scene;
         model.scale.set(10, 10, 10);
 
+        // Cercle shader
         const radius = 0.3;
         const discGeom = new THREE.CircleGeometry(radius, 32);
         const discMat = new THREE.ShaderMaterial({
@@ -174,6 +201,7 @@ export default function Vestige_1() {
     };
   }, []);
 
+  // Setup de l'orb audio-réactive
   useEffect(() => {
     const container = orbRef.current;
     if (!container) return;
@@ -233,15 +261,15 @@ export default function Vestige_1() {
       const bufferLength = analyser.frequencyBinCount;
       const dataArray = new Uint8Array(bufferLength);
 
-      const animate = () => {
-        requestAnimationFrame(animate);
+      const animateOrb = () => {
+        requestAnimationFrame(animateOrb);
         analyser.getByteFrequencyData(dataArray);
         const avg = dataArray.reduce((a, b) => a + b, 0) / bufferLength;
         orbMesh.material.uniforms.glowInternalRadius.value =
           glowParams.glowInternalRadius + avg / 30;
         renderer.render(scene, camera);
       };
-      animate();
+      animateOrb();
     }
 
     audioElement.play().catch((e) => console.warn("Autoplay blocked:", e));
@@ -262,6 +290,7 @@ export default function Vestige_1() {
     };
   }, []);
 
+  // Synchronisation des sous-titres
   useEffect(() => {
     const audio = narrationRef.current;
     if (!audio) return;
@@ -287,13 +316,8 @@ export default function Vestige_1() {
   }, [captions]);
 
   const handleReturn = () => {
-    // On signale qu'on revient pour activer le point suivant
     localStorage.setItem("pendingAdvance", "true");
-
-    // (Optionnel) on peut aussi conserver museumProgress si tu l’utilises ailleurs
     localStorage.setItem("museumProgress", "2");
-
-    // Retour vers la visite
     router.push("/visite_musee_2");
   };
 
