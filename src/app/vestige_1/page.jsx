@@ -89,7 +89,7 @@ export default function Vestige_1() {
     const loader = new GLTFLoader();
     let mixer;
     loader.load(
-      "/models/Dinos/Ammonite_compressed.glb",
+      "/models/Dinos/Ammonite.glb",
       (gltf) => {
         const model = gltf.scene;
         model.scale.set(10, 10, 10);
