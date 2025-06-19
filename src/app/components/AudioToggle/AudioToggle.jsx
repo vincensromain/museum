@@ -38,7 +38,9 @@ export default function AudioToggleButton() {
           audio.play().catch((err) => console.warn("Playback error:", err));
         }
       });
-
+      window.dispatchEvent(
+        new CustomEvent("toggleAudio", { detail: nextState })
+      );
       setIsAudioActuallyPlaying(nextState);
       return nextState;
     });
