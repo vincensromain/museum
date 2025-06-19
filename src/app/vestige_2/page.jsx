@@ -384,7 +384,7 @@ export default function Vestige_2() {
           </div>
           <div
             className={`skin_btn ${
-              modelUrl.endsWith("Ammonite_cut.glb") ? "active" : ""
+              modelUrl.endsWith("Ammonite.glb") ? "active" : ""
             }`}
             onClick={handleEclate}
           >
