@@ -347,7 +347,7 @@ export default function Vestige_1() {
 
   // 9) Vues normal / éclatée
   const handleNormal = () => setModelUrl("/models/Dinos/Ammonite.glb");
-  const handleEclate = () => setModelUrl("/models/Dinos/Ammonite.glb");
+  const handleEclate = () => setModelUrl("/models/Dinos/Ammonite_cut.glb");
 
   return (
     <section className="vestige">
@@ -374,7 +374,7 @@ export default function Vestige_1() {
           </div>
           <div
             className={`skin_btn ${
-              modelUrl.endsWith("Ammonite.glb") ? "active" : ""
+              modelUrl.endsWith("Ammonite_cut.glb") ? "active" : ""
             }`}
             onClick={handleEclate}
           >
