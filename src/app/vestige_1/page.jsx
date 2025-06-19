@@ -395,13 +395,13 @@ export default function Vestige_1() {
         <canvas ref={canvasRef} className="model_canvas" />
       </div>
 
-      <button
+      <div
+        className="play_audio_container"
         ref={playButtonRef}
         onClick={handlePlayAudio}
-        className="play_audio"
       >
-        Jouer l'audio
-      </button>
+        <button className="play_audio"> Jouer l'audio</button>
+      </div>
     </section>
   );
 }
