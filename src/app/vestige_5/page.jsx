@@ -13,6 +13,8 @@ import Orb from "../components/Orb/Orb";
 
 export default function Vestige_5() {
   const router = useRouter();
+  const [audioContext, setAudioContext] = useState(null);
+  const playButtonRef = useRef(null);
 
   // URL du modèle actif
   const [modelUrl, setModelUrl] = useState("/models/Dinos/Allosaurus.glb");
@@ -49,7 +51,7 @@ export default function Vestige_5() {
     },
     {
       time: 49.2,
-      text: "Le nom Arcovenator signifie « chasseur de l’Arc », en référence à la rivière proche, tandis que escotae rend hommage à Escota à la société autoroutière qui a non seulement interrompu les travaux,",
+      text: "Le nom Arcovenator signifie « chasseur de l’Arc », en référence à la rivière proche, tandis que escotae rend hommage à Escota, la société autoroutière qui a non seulement interrompu les travaux,",
     },
     {
       time: 61.52,
@@ -57,43 +59,61 @@ export default function Vestige_5() {
     },
   ];
 
-  // 1) Audio : volume initial puis lecture
-  useEffect(() => {
+  const handlePlayAudio = () => {
     const audio = narrationRef.current;
-    if (!audio) return;
-    const isOn = JSON.parse(localStorage.getItem("isAudioOn") ?? "true");
-    audio.volume = isOn ? 1 : 0;
-    audio.play().catch(() => {});
-  }, []);
+    if (!audio || !playButtonRef.current) return;
 
-  // 2) Écoute du toggleAudio pour mute/unmute en fondu
-  useEffect(() => {
-    const audio = narrationRef.current;
-    if (!audio) return;
-    const handleToggle = (e) => {
-      const isOn = e.detail;
-      gsap.to(audio, {
-        volume: isOn ? 1 : 0,
-        duration: 0.5,
-        ease: "power1.inOut",
-      });
+    const playAudio = async () => {
+      try {
+        const newAudioContext = new (window.AudioContext ||
+          window.webkitAudioContext)();
+        setAudioContext(newAudioContext);
+        await audio.play();
+
+        // Faire disparaître le bouton avec un effet d'opacité
+        gsap.to(playButtonRef.current, {
+          opacity: 0,
+          duration: 0.5,
+          onComplete: () => {
+            if (playButtonRef.current) {
+              playButtonRef.current.style.display = "none";
+            }
+          },
+        });
+      } catch (err) {
+        console.error("Erreur lors de la lecture audio:", err);
+      }
     };
-    window.addEventListener("toggleAudio", handleToggle);
-    return () => window.removeEventListener("toggleAudio", handleToggle);
-  }, []);
 
-  // 3) Hint drag
+    playAudio();
+  };
+
+  // Synchronisation des sous-titres
   useEffect(() => {
-    if (dragRef.current) {
-      gsap.fromTo(
-        dragRef.current,
-        { x: -10 },
-        { x: 10, duration: 1, ease: "power3.inOut", repeat: -1, yoyo: true }
-      );
-    }
+    const audio = narrationRef.current;
+    if (!audio) return;
+
+    let lastIdx = 0;
+    const findIdx = (t) => {
+      for (let i = captions.length - 1; i >= 0; i--) {
+        if (t >= captions[i].time) return i;
+      }
+      return 0;
+    };
+
+    const update = () => {
+      const idx = findIdx(audio.currentTime);
+      if (idx !== lastIdx) {
+        lastIdx = idx;
+        setCurrentIndex(idx);
+      }
+    };
+
+    audio.addEventListener("timeupdate", update);
+    return () => audio.removeEventListener("timeupdate", update);
   }, []);
 
-  // 4) Initialisation Three.js (scene, caméra, renderer, controls)
+  // Initialisation Three.js (scene, caméra, renderer, controls)
   useEffect(() => {
     const canvas = canvasRef.current;
     const width = canvas.clientWidth;
@@ -162,12 +182,11 @@ export default function Vestige_5() {
     };
   }, []);
 
-  // 5) Chargement dynamique du modèle (normal OU éclaté)
+  // Chargement dynamique du modèle (normal OU éclaté)
   useEffect(() => {
     const scene = sceneRef.current;
     if (!scene) return;
 
-    // Purge de l’ancien modèle
     if (currentModelRef.current) {
       scene.remove(currentModelRef.current);
       currentModelRef.current.traverse((child) => {
@@ -183,7 +202,6 @@ export default function Vestige_5() {
       currentModelRef.current = null;
     }
 
-    // Chargement du nouveau
     const loader = new GLTFLoader();
     loader.load(
       modelUrl,
@@ -194,11 +212,9 @@ export default function Vestige_5() {
           model.scale.set(0.26, 0.26, 0.26);
         }
 
-        // Ajoutez le modèle à la scène
         scene.add(model);
         currentModelRef.current = model;
 
-        // Disque shader
         const radius = 3;
         const discGeom = new THREE.CircleGeometry(radius, 32);
         const discMat = new THREE.ShaderMaterial({
@@ -229,15 +245,11 @@ export default function Vestige_5() {
             }
           `,
         });
-
         const disc = new THREE.Mesh(discGeom, discMat);
         disc.rotation.x = -Math.PI / 2;
         disc.position.y = 0.01;
-
-        // Ajoutez le disque directement à la scène, pas au modèle
         scene.add(disc);
 
-        // Animations
         if (gltf.animations?.length) {
           mixerRef.current = new THREE.AnimationMixer(model);
           gltf.animations.forEach((clip) =>
@@ -250,11 +262,11 @@ export default function Vestige_5() {
     );
   }, [modelUrl]);
 
-  // 6) Orb audio-réactive
+  // Orb audio-réactive
   useEffect(() => {
     const container = orbRef.current;
     const audioEl = narrationRef.current;
-    if (!container || !audioEl) return;
+    if (!container || !audioEl || !audioContext) return;
 
     const glowParams = {
       falloff: 0.1,
@@ -294,8 +306,6 @@ export default function Vestige_5() {
         ease: "sine.inOut",
       });
 
-    const audioContext = new (window.AudioContext ||
-      window.webkitAudioContext)();
     const analyser = audioContext.createAnalyser();
     const source = audioContext.createMediaElementSource(audioEl);
     source.connect(analyser);
@@ -313,8 +323,6 @@ export default function Vestige_5() {
     };
     animateOrb();
 
-    audioEl.play().catch(() => {});
-
     const onResize = () => {
       renderer.setSize(container.clientWidth, container.clientHeight);
       camera.aspect = container.clientWidth / container.clientHeight;
@@ -329,38 +337,16 @@ export default function Vestige_5() {
       orbMesh.material.dispose();
       renderer.dispose();
     };
-  }, []);
+  }, [audioContext]);
 
-  // 7) Synchronisation des sous-titres
-  useEffect(() => {
-    const audio = narrationRef.current;
-    if (!audio) return;
-    let lastIdx = 0;
-    const findIdx = (t) => {
-      for (let i = captions.length - 1; i >= 0; i--) {
-        if (t >= captions[i].time) return i;
-      }
-      return 0;
-    };
-    const update = () => {
-      const idx = findIdx(audio.currentTime);
-      if (idx !== lastIdx) {
-        lastIdx = idx;
-        setCurrentIndex(idx);
-      }
-    };
-    audio.addEventListener("timeupdate", update);
-    return () => audio.removeEventListener("timeupdate", update);
-  }, []);
-
-  // 8) Retour
+  // Retour
   const handleReturn = () => {
     localStorage.setItem("pendingAdvance", "true");
     localStorage.setItem("museumProgress", "6");
     router.push("/visite_musee_6");
   };
 
-  // 9) Vues normal / éclatée
+  // Vues normal / éclatée
   const handleNormal = () => setModelUrl("/models/Dinos/Allosaurus.glb");
   const handleEclate = () => setModelUrl("/models/Dinos/Arcovenator.glb");
 
@@ -381,7 +367,7 @@ export default function Vestige_5() {
         <div className="skin_container">
           <div
             className={`skin_btn ${
-              modelUrl.endsWith("Ammonite.glb") ? "active" : ""
+              modelUrl.endsWith("Allosaurus.glb") ? "active" : ""
             }`}
             onClick={handleNormal}
           >
@@ -389,11 +375,11 @@ export default function Vestige_5() {
           </div>
           <div
             className={`skin_btn ${
-              modelUrl.endsWith("Ammonite.glb") ? "active" : ""
+              modelUrl.endsWith("Arcovenator.glb") ? "active" : ""
             }`}
             onClick={handleEclate}
           >
-            Archovenator
+            Arcovenator
           </div>
         </div>
       </div>
@@ -418,6 +404,14 @@ export default function Vestige_5() {
 
       <div className="model_canvas_container">
         <canvas ref={canvasRef} className="model_canvas" />
+      </div>
+
+      <div
+        className="play_audio_container"
+        ref={playButtonRef}
+        onClick={handlePlayAudio}
+      >
+        <button className="play_audio">Jouer l'audio</button>
       </div>
     </section>
   );
