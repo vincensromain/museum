@@ -40,14 +40,10 @@ export default function Home() {
     },
     {
       time: 36.48,
-      text: "Pour commencer l'expérience, une première puce est intégrée sous cet écran. Approchez simplement votre téléphone pour lancer votre exploration.",
-    },
-    {
-      time: 44.0,
       text: "Pour respecter le confort de tous les visiteurs, si vous avez des écouteurs, pensez à les utiliser. Certains contenus sont sonores pour une immersion plus riche.",
     },
     {
-      time: 53.08,
+      time: 45.03,
       text: "Prenez votre temps, explorez à votre rythme et ouvrez l'œil. Ce que des fossiles ne disent pas au premier regard pourrait bien vous surprendre.",
     },
   ];
