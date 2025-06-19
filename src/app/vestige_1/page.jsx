@@ -399,13 +399,6 @@ export default function Vestige_1() {
         ref={playButtonRef}
         onClick={handlePlayAudio}
         className="play_audio"
-        style={{
-          position: "absolute",
-          top: "20px",
-          left: "50%",
-          transform: "translateX(-50%)",
-          zIndex: 1000,
-        }}
       >
         Jouer l'audio
       </button>
