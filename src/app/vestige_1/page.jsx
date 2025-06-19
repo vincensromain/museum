@@ -5,11 +5,12 @@ import { useRouter } from "next/navigation";
 import gsap from "gsap";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
-import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
 import "./Vestige_1.scss";
 import IconMuseum from "../components/IconsMuseum/IconsMuseum";
+import VestigeContent from "../components/VestigeContent/VestigeContent";
+import Narrator from "../components/Narrator/Narrator";
 import Skin from "../components/Skin/Skin";
 import Orb from "../components/Orb/Orb";
 
@@ -36,17 +37,16 @@ export default function Vestige_1() {
   ];
 
   useEffect(() => {
-    // hint drag
     gsap.fromTo(
       dragRef.current,
       { x: -10 },
       { x: 10, duration: 1, ease: "power3.inOut", repeat: -1, yoyo: true }
     );
 
-    // three.js setup
     const canvas = canvasRef.current;
     const width = canvas.clientWidth;
     const height = canvas.clientHeight;
+
     const renderer = new THREE.WebGLRenderer({
       canvas,
       antialias: true,
@@ -70,38 +70,30 @@ export default function Vestige_1() {
     controls.enableDamping = true;
     controls.enablePan = false;
     controls.enableZoom = true;
-    // on peut ré-activer les clamps une fois le debug terminé
+
     const initialPolar = Math.acos(
       (camera.position.y - controls.target.y) /
         camera.position.distanceTo(controls.target)
     );
     controls.minPolarAngle = initialPolar;
     controls.maxPolarAngle = initialPolar;
-    controls.maxDistance = camera.position.distanceTo(controls.target);
+
+    const initialDistance = camera.position.distanceTo(controls.target);
+    controls.maxDistance = initialDistance;
 
     controls.addEventListener("start", () => {
       if (dragRef.current)
         gsap.to(dragRef.current, { opacity: 0, duration: 0.5 });
     });
 
-    // DRACO loader
-    const dracoLoader = new DRACOLoader();
-    dracoLoader.setDecoderPath("/draco/"); // place draco_decoder files in public/draco/
-
-    // GLTF loader with DRACO
     const loader = new GLTFLoader();
-    loader.setDRACOLoader(dracoLoader);
-
     let mixer;
     loader.load(
-      "/models/Dinos/Ammonite-draco.glb", // utilise ta version compressée Draco
+      "/models/Dinos/Ammonite_compressed.glb",
       (gltf) => {
         const model = gltf.scene;
         model.scale.set(10, 10, 10);
-        model.position.y = 0.5;
-        model.rotation.x = Math.PI;
 
-        // disque au sol
         const radius = 0.2;
         const discGeom = new THREE.CircleGeometry(radius, 32);
         const discMat = new THREE.ShaderMaterial({
@@ -135,23 +127,24 @@ export default function Vestige_1() {
         const disc = new THREE.Mesh(discGeom, discMat);
         disc.rotation.x = -Math.PI / 2;
         disc.position.y = 0.01;
-        scene.add(disc);
+        model.add(disc);
 
         scene.add(model);
-
         if (gltf.animations?.length) {
           mixer = new THREE.AnimationMixer(model);
           gltf.animations.forEach((clip) => mixer.clipAction(clip).play());
         }
       },
       undefined,
-      (error) => console.error("Error loading DRACO GLTF:", error)
+      (error) => console.error("Error loading GLTF:", error)
     );
 
     const onWindowResize = () => {
-      camera.aspect = canvas.clientWidth / canvas.clientHeight;
+      const w = canvas.clientWidth;
+      const h = canvas.clientHeight;
+      camera.aspect = w / h;
       camera.updateProjectionMatrix();
-      renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+      renderer.setSize(w, h);
     };
     window.addEventListener("resize", onWindowResize);
 
@@ -170,17 +163,101 @@ export default function Vestige_1() {
       controls.dispose();
       renderer.dispose();
       scene.clear();
-      dracoLoader.dispose();
     };
   }, []);
 
   useEffect(() => {
-    // … orb + audio analyser (inchangé) …
+    const container = orbRef.current;
+    if (!container) return;
+
+    const glowParams = {
+      falloff: 0.1,
+      glowInternalRadius: 6,
+      glowSharpness: 0.5,
+      opacity: 1,
+      glowColor: "#ccfbff",
+    };
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(
+      75,
+      container.clientWidth / container.clientHeight,
+      0.1,
+      100
+    );
+    camera.position.set(0, 0, 2.5);
+    scene.add(camera);
+
+    const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    container.appendChild(renderer.domElement);
+
+    const orbMesh = Orb({
+      position: new THREE.Vector3(0, 0, 0),
+      glowParams,
+      scene,
+    });
+    orbMesh.scale.multiplyScalar(6);
+
+    const breatheTl = gsap.timeline({ repeat: -1, yoyo: true });
+    breatheTl.to(orbMesh.material.uniforms.glowInternalRadius, {
+      value: glowParams.glowInternalRadius + 1,
+      duration: 1.1,
+      ease: "sine.inOut",
+    });
+
+    if (!audioContextRef.current) {
+      audioContextRef.current = new (window.AudioContext ||
+        window.webkitAudioContext)();
+    }
+    const audioContext = audioContextRef.current;
+    const audioElement = narrationRef.current;
+
+    if (!audioSourceRef.current) {
+      audioSourceRef.current =
+        audioContext.createMediaElementSource(audioElement);
+      const analyser = audioContext.createAnalyser();
+      audioSourceRef.current.connect(analyser);
+      analyser.connect(audioContext.destination);
+
+      analyser.fftSize = 256;
+      const bufferLength = analyser.frequencyBinCount;
+      const dataArray = new Uint8Array(bufferLength);
+
+      const animate = () => {
+        requestAnimationFrame(animate);
+        analyser.getByteFrequencyData(dataArray);
+        const avg = dataArray.reduce((a, b) => a + b, 0) / bufferLength;
+        orbMesh.material.uniforms.glowInternalRadius.value =
+          glowParams.glowInternalRadius + avg / 30;
+        renderer.render(scene, camera);
+      };
+      animate();
+    }
+
+    audioElement.play().catch((e) => console.warn("Autoplay blocked:", e));
+
+    const onResize = () => {
+      renderer.setSize(container.clientWidth, container.clientHeight);
+      camera.aspect = container.clientWidth / container.clientHeight;
+      camera.updateProjectionMatrix();
+    };
+    window.addEventListener("resize", onResize);
+
+    return () => {
+      window.removeEventListener("resize", onResize);
+      container.removeChild(renderer.domElement);
+      orbMesh.geometry.dispose();
+      orbMesh.material.dispose();
+      renderer.dispose();
+    };
   }, []);
 
   useEffect(() => {
     const audio = narrationRef.current;
     if (!audio) return;
+
     let lastIdx = 0;
     const findIdx = (t) => {
       for (let i = captions.length - 1; i >= 0; i--) {
@@ -188,6 +265,7 @@ export default function Vestige_1() {
       }
       return 0;
     };
+
     const update = () => {
       const idx = findIdx(audio.currentTime);
       if (idx !== lastIdx) {
@@ -195,13 +273,19 @@ export default function Vestige_1() {
         setCurrentIndex(idx);
       }
     };
+
     audio.addEventListener("timeupdate", update);
     return () => audio.removeEventListener("timeupdate", update);
   }, [captions]);
 
   const handleReturn = () => {
+    // On signale qu'on revient pour activer le point suivant
     localStorage.setItem("pendingAdvance", "true");
+
+    // (Optionnel) on peut aussi conserver museumProgress si tu l’utilises ailleurs
     localStorage.setItem("museumProgress", "2");
+
+    // Retour vers la visite
     router.push("/visite_musee_2");
   };
 

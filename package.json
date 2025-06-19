@@ -24,7 +24,11 @@
     "three": "^0.176.0"
   },
   "devDependencies": {
+    "@gltf-transform/cli": "^4.2.0",
+    "@gltf-transform/extensions": "^4.2.0",
     "@types/node": "22.15.18",
+    "imagemin-cli": "^8.0.0",
+    "imagemin-mozjpeg": "^10.0.0",
     "typescript": "5.8.3"
   }
 }
