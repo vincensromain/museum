@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import * as THREE from "three";
 import gsap from "gsap";
 import { Draggable } from "gsap/Draggable";
-import AudioToggleButton from "../components/AudioToggleButton";
+import AudioToggleButton from "./components/AudioToggle/AudioToggle";
 import content from "./data/content.json";
 import IconMuseum from "./components/IconsMuseum/IconsMuseum";
 import AppearRef from "./components/AppearRef/AppearRef";
