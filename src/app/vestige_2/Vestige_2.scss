@@ -55,6 +55,7 @@ $gradient-variant-1: linear-gradient(
         font-size: 14px;
         backdrop-filter: blur(34.2px);
         border: solid 0.5px #8cd1d7a6;
+        text-align: center;
       }
 
       .active {
@@ -108,7 +109,7 @@ $gradient-variant-1: linear-gradient(
         color: rgb(255, 255, 255);
         opacity: 0.6;
         width: 80%;
-        top: -50px;
+        top: -80px;
         opacity: 0;
         transition: opacity 0.3s ease-in-out;
         text-align: center;

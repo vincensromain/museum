@@ -55,16 +55,7 @@ $gradient-variant-1: linear-gradient(
         font-size: 14px;
         backdrop-filter: blur(34.2px);
         border: solid 0.5px #8cd1d7a6;
-      }
-
-      .active {
-        border-radius: 27px;
-        padding: 7.5px 21.5px;
-        background-color: #d9eb2a;
-        z-index: 99;
-        cursor: pointer;
-        color: #0c2d36;
-        font-size: 14px;
+        text-align: center;
       }
     }
   }

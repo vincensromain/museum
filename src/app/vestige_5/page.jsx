@@ -9,40 +9,92 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
 import "./Vestige_5.scss";
 import IconMuseum from "../components/IconsMuseum/IconsMuseum";
-import VestigeContent from "../components/VestigeContent/VestigeContent";
-import Narrator from "../components/Narrator/Narrator";
-import Skin from "../components/Skin/Skin";
 import Orb from "../components/Orb/Orb";
 
-export default function Vestige_1() {
-  const dragRef = useRef(null);
-  const canvasRef = useRef(null);
-  const orbRef = useRef(null);
-  const narrationRef = useRef(null);
-  const audioContextRef = useRef(null);
-  const audioSourceRef = useRef(null);
+export default function Vestige_5() {
   const router = useRouter();
 
+  // URL du modèle actif
+  const [modelUrl, setModelUrl] = useState("/models/Dinos/Allosaurus.glb");
+  // Index du sous-titre actif
   const [currentIndex, setCurrentIndex] = useState(0);
 
+  const canvasRef = useRef(null);
+  const dragRef = useRef(null);
+  const orbRef = useRef(null);
+  const narrationRef = useRef(null);
+
+  // Réfs Three.js
+  const sceneRef = useRef();
+  const mixerRef = useRef();
+  const currentModelRef = useRef();
+
+  // Données des sous-titres
   const captions = [
     {
-      time: 0,
-      text: "Bienvenue dans cette expérience immersive. Chaque phrase est synchronisée avec l'audio. Regardez comment le texte défile.",
+      time: 0.88,
+      text: "Que serait un monde peuplé de dinosaures sans ses grands prédateurs ? L’Alosaure, bien qu'il n'ait jamais vécu dans notre région, incarne les premiers grands chasseurs du Jurassique.",
     },
     {
-      time: 8,
-      text: "La ligne actuelle devient rouge automatiquement. Merci d'avoir écouté cette démonstration.",
+      time: 11.16,
+      text: "Ses dix mètres de long, sa mâchoire puissante et sa vision stéréoscopique en faisaient un chasseur hors pair, capable de survivre à des combats féroces.",
+    },
+    {
+      time: 19.36,
+      text: "Mais ici, dans le sud de la France, un autre carnivore a laissé sa trace : l'Arcovenator escotae. Ce dinosaure appartient à la famille des abélisauridés, reconnaissable à leur crâne massif et à leurs petits bras.",
+    },
+    {
+      time: 34.0,
+      text: "Il chassait probablement des herbivores comme le Rhabdodon dans les forêts et plaines humides de Provence. Il a été mis au jour en 2007 lors de travaux préparatoires à l'élargissement de l'autoroute A8 près de Pourrières, dans une formation géologique riche en fossiles.",
+    },
+    {
+      time: 49.2,
+      text: "Le nom Arcovenator signifie « chasseur de l’Arc », en référence à la rivière proche, tandis que escotae rend hommage à Escota à la société autoroutière qui a non seulement interrompu les travaux,",
+    },
+    {
+      time: 61.52,
+      text: "mais a aussi financé des fouilles pour que le site soit exploré en profondeur.",
     },
   ];
 
+  // 1) Audio : volume initial puis lecture
   useEffect(() => {
-    gsap.fromTo(
-      dragRef.current,
-      { x: -10 },
-      { x: 10, duration: 1, ease: "power3.inOut", repeat: -1, yoyo: true }
-    );
+    const audio = narrationRef.current;
+    if (!audio) return;
+    const isOn = JSON.parse(localStorage.getItem("isAudioOn") ?? "true");
+    audio.volume = isOn ? 1 : 0;
+    audio.play().catch(() => {});
+  }, []);
 
+  // 2) Écoute du toggleAudio pour mute/unmute en fondu
+  useEffect(() => {
+    const audio = narrationRef.current;
+    if (!audio) return;
+    const handleToggle = (e) => {
+      const isOn = e.detail;
+      gsap.to(audio, {
+        volume: isOn ? 1 : 0,
+        duration: 0.5,
+        ease: "power1.inOut",
+      });
+    };
+    window.addEventListener("toggleAudio", handleToggle);
+    return () => window.removeEventListener("toggleAudio", handleToggle);
+  }, []);
+
+  // 3) Hint drag
+  useEffect(() => {
+    if (dragRef.current) {
+      gsap.fromTo(
+        dragRef.current,
+        { x: -10 },
+        { x: 10, duration: 1, ease: "power3.inOut", repeat: -1, yoyo: true }
+      );
+    }
+  }, []);
+
+  // 4) Initialisation Three.js (scene, caméra, renderer, controls)
+  useEffect(() => {
     const canvas = canvasRef.current;
     const width = canvas.clientWidth;
     const height = canvas.clientHeight;
@@ -56,6 +108,8 @@ export default function Vestige_1() {
     renderer.setPixelRatio(window.devicePixelRatio);
 
     const scene = new THREE.Scene();
+    sceneRef.current = scene;
+
     const camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 1000);
     camera.position.set(0, 3, 6);
     camera.lookAt(0, 0, 0);
@@ -70,32 +124,83 @@ export default function Vestige_1() {
     controls.enableDamping = true;
     controls.enablePan = false;
     controls.enableZoom = true;
-
     const initialPolar = Math.acos(
       (camera.position.y - controls.target.y) /
         camera.position.distanceTo(controls.target)
     );
-    controls.minPolarAngle = initialPolar;
-    controls.maxPolarAngle = initialPolar;
-
-    const initialDistance = camera.position.distanceTo(controls.target);
-    controls.maxDistance = initialDistance;
-
+    controls.minPolarAngle = controls.maxPolarAngle = initialPolar;
+    controls.maxDistance = camera.position.distanceTo(controls.target);
     controls.addEventListener("start", () => {
       if (dragRef.current)
         gsap.to(dragRef.current, { opacity: 0, duration: 0.5 });
     });
 
+    const onResize = () => {
+      const w = canvas.clientWidth,
+        h = canvas.clientHeight;
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, h);
+    };
+    window.addEventListener("resize", onResize);
+
+    const clock = new THREE.Clock();
+    const animate = () => {
+      requestAnimationFrame(animate);
+      const delta = clock.getDelta();
+      if (mixerRef.current) mixerRef.current.update(delta);
+      controls.update();
+      renderer.render(scene, camera);
+    };
+    animate();
+
+    return () => {
+      window.removeEventListener("resize", onResize);
+      controls.dispose();
+      renderer.dispose();
+      scene.clear();
+    };
+  }, []);
+
+  // 5) Chargement dynamique du modèle (normal OU éclaté)
+  useEffect(() => {
+    const scene = sceneRef.current;
+    if (!scene) return;
+
+    // Purge de l’ancien modèle
+    if (currentModelRef.current) {
+      scene.remove(currentModelRef.current);
+      currentModelRef.current.traverse((child) => {
+        if (child.geometry) child.geometry.dispose();
+        if (child.material) {
+          if (Array.isArray(child.material)) {
+            child.material.forEach((mat) => mat.dispose());
+          } else {
+            child.material.dispose();
+          }
+        }
+      });
+      currentModelRef.current = null;
+    }
+
+    // Chargement du nouveau
     const loader = new GLTFLoader();
-    let mixer;
     loader.load(
-      "/models/Dinos/Allosaurus.glb",
+      modelUrl,
       (gltf) => {
         const model = gltf.scene;
-        model.scale.set(0.2, 0.2, 0.2);
+        model.scale.set(2, 2, 2);
+        if (modelUrl.endsWith("Allosaurus.glb")) {
+          model.scale.set(0.2, 0.2, 0.2);
+        }
 
-        const radius = 10;
-        const discGeom = new THREE.CircleGeometry(radius, 64);
+        // Ajoutez le modèle à la scène
+        scene.add(model);
+        currentModelRef.current = model;
+
+        // Disque shader
+        const radius = 3;
+        const discGeom = new THREE.CircleGeometry(radius, 32);
         const discMat = new THREE.ShaderMaterial({
           transparent: true,
           depthWrite: false,
@@ -124,51 +229,32 @@ export default function Vestige_1() {
             }
           `,
         });
+
         const disc = new THREE.Mesh(discGeom, discMat);
         disc.rotation.x = -Math.PI / 2;
         disc.position.y = 0.01;
-        model.add(disc);
 
-        scene.add(model);
+        // Ajoutez le disque directement à la scène, pas au modèle
+        scene.add(disc);
+
+        // Animations
         if (gltf.animations?.length) {
-          mixer = new THREE.AnimationMixer(model);
-          gltf.animations.forEach((clip) => mixer.clipAction(clip).play());
+          mixerRef.current = new THREE.AnimationMixer(model);
+          gltf.animations.forEach((clip) =>
+            mixerRef.current.clipAction(clip).play()
+          );
         }
       },
       undefined,
-      (error) => console.error("Error loading GLTF:", error)
+      (err) => console.error("Erreur chargement GLTF :", err)
     );
+  }, [modelUrl]);
 
-    const onWindowResize = () => {
-      const w = canvas.clientWidth;
-      const h = canvas.clientHeight;
-      camera.aspect = w / h;
-      camera.updateProjectionMatrix();
-      renderer.setSize(w, h);
-    };
-    window.addEventListener("resize", onWindowResize);
-
-    const clock = new THREE.Clock();
-    const animate = () => {
-      requestAnimationFrame(animate);
-      const delta = clock.getDelta();
-      if (mixer) mixer.update(delta);
-      controls.update();
-      renderer.render(scene, camera);
-    };
-    animate();
-
-    return () => {
-      window.removeEventListener("resize", onWindowResize);
-      controls.dispose();
-      renderer.dispose();
-      scene.clear();
-    };
-  }, []);
-
+  // 6) Orb audio-réactive
   useEffect(() => {
     const container = orbRef.current;
-    if (!container) return;
+    const audioEl = narrationRef.current;
+    if (!container || !audioEl) return;
 
     const glowParams = {
       falloff: 0.1,
@@ -200,43 +286,34 @@ export default function Vestige_1() {
     });
     orbMesh.scale.multiplyScalar(6);
 
-    const breatheTl = gsap.timeline({ repeat: -1, yoyo: true });
-    breatheTl.to(orbMesh.material.uniforms.glowInternalRadius, {
-      value: glowParams.glowInternalRadius + 1,
-      duration: 1.1,
-      ease: "sine.inOut",
-    });
+    gsap
+      .timeline({ repeat: -1, yoyo: true })
+      .to(orbMesh.material.uniforms.glowInternalRadius, {
+        value: glowParams.glowInternalRadius + 1,
+        duration: 1.1,
+        ease: "sine.inOut",
+      });
 
-    if (!audioContextRef.current) {
-      audioContextRef.current = new (window.AudioContext ||
-        window.webkitAudioContext)();
-    }
-    const audioContext = audioContextRef.current;
-    const audioElement = narrationRef.current;
+    const audioContext = new (window.AudioContext ||
+      window.webkitAudioContext)();
+    const analyser = audioContext.createAnalyser();
+    const source = audioContext.createMediaElementSource(audioEl);
+    source.connect(analyser);
+    analyser.connect(audioContext.destination);
+    analyser.fftSize = 256;
+    const dataArray = new Uint8Array(analyser.frequencyBinCount);
 
-    if (!audioSourceRef.current) {
-      audioSourceRef.current =
-        audioContext.createMediaElementSource(audioElement);
-      const analyser = audioContext.createAnalyser();
-      audioSourceRef.current.connect(analyser);
-      analyser.connect(audioContext.destination);
+    const animateOrb = () => {
+      requestAnimationFrame(animateOrb);
+      analyser.getByteFrequencyData(dataArray);
+      const avg = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+      orbMesh.material.uniforms.glowInternalRadius.value =
+        glowParams.glowInternalRadius + avg / 30;
+      renderer.render(scene, camera);
+    };
+    animateOrb();
 
-      analyser.fftSize = 256;
-      const bufferLength = analyser.frequencyBinCount;
-      const dataArray = new Uint8Array(bufferLength);
-
-      const animate = () => {
-        requestAnimationFrame(animate);
-        analyser.getByteFrequencyData(dataArray);
-        const avg = dataArray.reduce((a, b) => a + b, 0) / bufferLength;
-        orbMesh.material.uniforms.glowInternalRadius.value =
-          glowParams.glowInternalRadius + avg / 30;
-        renderer.render(scene, camera);
-      };
-      animate();
-    }
-
-    audioElement.play().catch((e) => console.warn("Autoplay blocked:", e));
+    audioEl.play().catch(() => {});
 
     const onResize = () => {
       renderer.setSize(container.clientWidth, container.clientHeight);
@@ -254,10 +331,10 @@ export default function Vestige_1() {
     };
   }, []);
 
+  // 7) Synchronisation des sous-titres
   useEffect(() => {
     const audio = narrationRef.current;
     if (!audio) return;
-
     let lastIdx = 0;
     const findIdx = (t) => {
       for (let i = captions.length - 1; i >= 0; i--) {
@@ -265,7 +342,6 @@ export default function Vestige_1() {
       }
       return 0;
     };
-
     const update = () => {
       const idx = findIdx(audio.currentTime);
       if (idx !== lastIdx) {
@@ -273,21 +349,20 @@ export default function Vestige_1() {
         setCurrentIndex(idx);
       }
     };
-
     audio.addEventListener("timeupdate", update);
     return () => audio.removeEventListener("timeupdate", update);
-  }, [captions]);
+  }, []);
 
+  // 8) Retour
   const handleReturn = () => {
-    // On signale qu'on revient pour activer le point suivant
     localStorage.setItem("pendingAdvance", "true");
-
-    // (Optionnel) on peut aussi conserver museumProgress si tu l’utilises ailleurs
-    localStorage.setItem("museumProgress", "2");
-
-    // Retour vers la visite
+    localStorage.setItem("museumProgress", "6");
     router.push("/visite_musee_6");
   };
+
+  // 9) Vues normal / éclatée
+  const handleNormal = () => setModelUrl("/models/Dinos/Allosaurus.glb");
+  const handleEclate = () => setModelUrl("/models/Dinos/Arcovenator.glb");
 
   return (
     <section className="vestige">
@@ -295,16 +370,39 @@ export default function Vestige_1() {
         <IconMuseum icon="svgArrowBack" />
         <span className="go_back_text">Retour</span>
       </div>
-      <Skin />
+
+      <div className="naration_orb" ref={orbRef}></div>
+
       <div ref={dragRef} className="svg_drag">
         <IconMuseum icon="svgDrag" />
       </div>
+
+      <div className="skin">
+        <div className="skin_container">
+          <div
+            className={`skin_btn ${
+              modelUrl.endsWith("Ammonite.glb") ? "active" : ""
+            }`}
+            onClick={handleNormal}
+          >
+            Allosaure
+          </div>
+          <div
+            className={`skin_btn ${
+              modelUrl.endsWith("Ammonite.glb") ? "active" : ""
+            }`}
+            onClick={handleEclate}
+          >
+            Archovenator
+          </div>
+        </div>
+      </div>
+
       <div className="naration_text_content">
-        <div className="naration_orb" ref={orbRef}></div>
         <div className="naration_text">
           <audio
             ref={narrationRef}
-            src="/Audios/narration.m4a"
+            src="/Audios/Alosaure_Archovenator.mp3"
             style={{ display: "none" }}
           />
           {captions.map((c, i) => (
@@ -317,6 +415,7 @@ export default function Vestige_1() {
           ))}
         </div>
       </div>
+
       <div className="model_canvas_container">
         <canvas ref={canvasRef} className="model_canvas" />
       </div>
