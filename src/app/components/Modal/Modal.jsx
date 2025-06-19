@@ -2,7 +2,6 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
-import useNfc from "../Hook/useNfc";
 import { useRouter } from "next/navigation";
 import IconMuseum from "../IconsMuseum/IconsMuseum";
 import Link from "next/link";
@@ -17,13 +16,36 @@ const Modal = ({ showReturn, content, lastViewedOrbRef, modalAppear }) => {
   const currentIndex = lastViewedOrbRef.current ?? 0;
   const currentArtwork = content.artworks[currentIndex];
 
-  // 🛰️ NFC : activation automatique à l'ouverture
-  useNfc(showReturn, setScanned);
-
   // ✅ Déclencheur de progression
   const triggerNextPoint = () => {
     window.dispatchEvent(new CustomEvent("next-point"));
   };
+
+  // Activation du lecteur NFC
+  useEffect(() => {
+    const startNfcReader = async () => {
+      if (showReturn && "NDEFReader" in window) {
+        try {
+          const ndef = new NDEFReader();
+          await ndef.scan();
+          console.log("Scan started successfully.");
+          ndef.onreading = (event) => {
+            console.log("NFC tag scanned:", event);
+            setScanned(true);
+            // Traitez les données de l'étiquette NFC ici
+          };
+        } catch (error) {
+          console.error("Error starting NFC scan:", error);
+        }
+      }
+    };
+
+    startNfcReader();
+
+    return () => {
+      // Nettoyage éventuel
+    };
+  }, [showReturn]);
 
   // ▶️ Animation d'ouverture
   useEffect(() => {
