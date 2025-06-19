@@ -1,22 +1,16 @@
-import { useEffect, useRef, useState } from "react";
+"use client";
+
+import { useEffect, useRef } from "react";
 import { gsap } from "gsap";
 import "./AudioAnimatedIcon.scss";
 
-export default function AudioAnimatedIcon({ isPlaying: externalPlaying }) {
+export default function AudioAnimatedIcon({ isPlaying }) {
   const barsRef = useRef([]);
-  // Local play state toggled on click, initialized from prop
-  const [isPlaying, setIsPlaying] = useState(externalPlaying);
-
-  // Sync local state when external prop changes
-  useEffect(() => {
-    setIsPlaying(externalPlaying);
-  }, [externalPlaying]);
 
   useEffect(() => {
     if (!barsRef.current) return;
 
     if (isPlaying) {
-      // Start or resume animation
       barsRef.current.forEach((bar, i) => {
         gsap.to(bar, {
           height: "16px",
@@ -28,7 +22,6 @@ export default function AudioAnimatedIcon({ isPlaying: externalPlaying }) {
         });
       });
     } else {
-      // Kill ongoing tweens and reset bars to default height
       gsap.killTweensOf(barsRef.current);
       barsRef.current.forEach((bar) => {
         gsap.to(bar, {
@@ -40,13 +33,8 @@ export default function AudioAnimatedIcon({ isPlaying: externalPlaying }) {
     }
   }, [isPlaying]);
 
-  // Toggle play state on wrapper click
-  const handleToggle = () => {
-    setIsPlaying((prev) => !prev);
-  };
-
   return (
-    <div className="audio_bars_wrapper" onClick={handleToggle}>
+    <div className="audio_bars_wrapper">
       {[0, 1, 2, 3, 4].map((_, i) => (
         <span
           key={i}
