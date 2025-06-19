@@ -92,7 +92,7 @@ export default function Vestige_1() {
       "/models/Dinos/Titanosaur.glb",
       (gltf) => {
         const model = gltf.scene;
-        model.scale.set(0.2, 0.2, 0.2);
+        model.scale.set(0.4, 0.4, 0.4);
 
         const radius = 10;
         const discGeom = new THREE.CircleGeometry(radius, 64);

@@ -92,10 +92,10 @@ export default function Vestige_1() {
       "/models/Dinos/Pterosaure.glb",
       (gltf) => {
         const model = gltf.scene;
-        model.scale.set(0.2, 0.2, 0.2);
+        model.scale.set(6, 6, 6);
 
-        const radius = 10;
-        const discGeom = new THREE.CircleGeometry(radius, 64);
+        const radius = 0.5;
+        const discGeom = new THREE.CircleGeometry(radius, 32);
         const discMat = new THREE.ShaderMaterial({
           transparent: true,
           depthWrite: false,
