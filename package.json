@@ -10,7 +10,6 @@
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",
-    "@loaders.gl/draco": "^4.3.3",
     "@studio-freight/react-lenis": "^0.0.47",
     "@types/three": "^0.176.0",
     "gsap": "^3.12.7",
@@ -24,11 +23,7 @@
     "three": "^0.176.0"
   },
   "devDependencies": {
-    "@gltf-transform/cli": "^4.2.0",
-    "@gltf-transform/extensions": "^4.2.0",
     "@types/node": "22.15.18",
-    "imagemin-cli": "^8.0.0",
-    "imagemin-mozjpeg": "^10.0.0",
     "typescript": "5.8.3"
   }
 }
