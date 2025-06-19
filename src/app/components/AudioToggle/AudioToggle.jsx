@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { gsap } from "gsap";
-import AudioAnimatedIcon from "../components/AudioAnimatedIcon/AudioAnimatedIcon"; // ajuste le chemin si besoin
+import AudioAnimatedIcon from "../AudioAnimatedIcon/AudioAnimatedIcon"; // ajuste le chemin si besoin
 import "./AudioToggle.scss";
 
 export default function AudioToggleButton() {

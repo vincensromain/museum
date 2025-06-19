@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import * as THREE from "three";
 import gsap from "gsap";
 import { Draggable } from "gsap/Draggable";
-import AudioToggleButton from "../components/AudioToggleButton"; // ajuste le chemin si besoin
+import AudioToggleButton from "./components/AudioToggle/AudioToggle"; // ajuste le chemin si besoin
 import content from "./data/content.json";
 import IconMuseum from "./components/IconsMuseum/IconsMuseum";
 import AppearRef from "./components/AppearRef/AppearRef";
