@@ -27,12 +27,20 @@ export default function Vestige_1() {
 
   const captions = [
     {
-      time: 0,
-      text: "Bienvenue dans cette expérience immersive. Chaque phrase est synchronisée avec l'audio. Regardez comment le texte défile.",
+      time: 0.24,
+      text: "Avant les dinosaures, la mer régnait sur la planète et dans ses eaux chaudes flottaient de mystérieuses spirales, les ammonites, ce n'était pas qu'un simple coquillage.",
     },
     {
-      time: 8,
-      text: "La ligne actuelle devient rouge automatiquement. Merci d'avoir écouté cette démonstration.",
+      time: 12.4,
+      text: "A l'intérieur se cachait un animal proche du poulpe qui se déplaçait par jets d'eau en contrôlant sa flottabilité grâce à des chambres remplies d'air. Un vrai sous marin naturel.",
+    },
+    {
+      time: 23.0,
+      text: "Certaines ammonites étaient minuscules, d'autres atteignaient la taille d'un pneu de camion. Elles ont vécu des centaines de millions d'années avant de disparaître avec l'extinction du Crétacé.",
+    },
+    {
+      time: 35.4,
+      text: "Aujourd'hui, leurs coquilles fossilisées ornent encore les falaises du monde entier et nous rappelle que la mer fut le tout premier royaume de la vie.",
     },
   ];
 
@@ -304,7 +312,7 @@ export default function Vestige_1() {
         <div className="naration_text">
           <audio
             ref={narrationRef}
-            src="/Audios/narration.m4a"
+            src="/Audios/Ammonites.mp3"
             style={{ display: "none" }}
           />
           {captions.map((c, i) => (
