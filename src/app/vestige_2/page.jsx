@@ -92,9 +92,9 @@ export default function Vestige_1() {
       "/models/Dinos/Belemnites.glb",
       (gltf) => {
         const model = gltf.scene;
-        model.scale.set(1.2, 1.2, 1.2);
+        model.scale.set(0.2, 0.2, 0.2);
 
-        const radius = 2;
+        const radius = 10;
         const discGeom = new THREE.CircleGeometry(radius, 64);
         const discMat = new THREE.ShaderMaterial({
           transparent: true,
@@ -126,7 +126,7 @@ export default function Vestige_1() {
         });
         const disc = new THREE.Mesh(discGeom, discMat);
         disc.rotation.x = -Math.PI / 2;
-        disc.position.y = -1.4;
+        disc.position.y = 0.01;
         model.add(disc);
 
         scene.add(model);

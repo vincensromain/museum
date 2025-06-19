@@ -54,12 +54,13 @@ $gradient-variant-1: linear-gradient(
 
       .line {
         position: absolute;
-        right: 0px;
+        left: 50%;
+        transform: translateX(-50%);
         top: 30px;
         font-size: 20px;
         color: rgb(255, 255, 255);
         opacity: 0.6;
-        width: 60%;
+        width: 80%;
         top: 13px;
         opacity: 0;
         transition: opacity 0.3s ease-in-out;

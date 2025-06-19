@@ -9,6 +9,8 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
 import "./Vestige_4.scss";
 import IconMuseum from "../components/IconsMuseum/IconsMuseum";
+import VestigeContent from "../components/VestigeContent/VestigeContent";
+import Narrator from "../components/Narrator/Narrator";
 import Skin from "../components/Skin/Skin";
 import Orb from "../components/Orb/Orb";
 
@@ -35,17 +37,16 @@ export default function Vestige_1() {
   ];
 
   useEffect(() => {
-    // Animation du drag hint
     gsap.fromTo(
       dragRef.current,
       { x: -10 },
       { x: 10, duration: 1, ease: "power3.inOut", repeat: -1, yoyo: true }
     );
 
-    // Setup Three.js
     const canvas = canvasRef.current;
     const width = canvas.clientWidth;
     const height = canvas.clientHeight;
+
     const renderer = new THREE.WebGLRenderer({
       canvas,
       antialias: true,
@@ -69,35 +70,32 @@ export default function Vestige_1() {
     controls.enableDamping = true;
     controls.enablePan = false;
     controls.enableZoom = true;
+
     const initialPolar = Math.acos(
       (camera.position.y - controls.target.y) /
         camera.position.distanceTo(controls.target)
     );
     controls.minPolarAngle = initialPolar;
     controls.maxPolarAngle = initialPolar;
-    controls.maxDistance = camera.position.distanceTo(controls.target);
+
+    const initialDistance = camera.position.distanceTo(controls.target);
+    controls.maxDistance = initialDistance;
+
     controls.addEventListener("start", () => {
       if (dragRef.current)
         gsap.to(dragRef.current, { opacity: 0, duration: 0.5 });
     });
 
-    // Chargement du modèle
     const loader = new GLTFLoader();
     let mixer;
     loader.load(
       "/models/Dinos/Rhabdodon.glb",
       (gltf) => {
         const model = gltf.scene;
-        model.scale.set(2, 2, 2);
-        model.rotation.x = Math.PI; // redresse le dino
-        model.position.y = 1; // le soulève un peu
+        model.scale.set(0.2, 0.2, 0.2);
 
-        // 1) ajout du modèle à la scène
-        scene.add(model);
-
-        // 2) création du disque au sol, ajouté à la SCÈNE
-        const radius = 2;
-        const discGeom = new THREE.CircleGeometry(radius, 32);
+        const radius = 10;
+        const discGeom = new THREE.CircleGeometry(radius, 64);
         const discMat = new THREE.ShaderMaterial({
           transparent: true,
           depthWrite: false,
@@ -128,10 +126,10 @@ export default function Vestige_1() {
         });
         const disc = new THREE.Mesh(discGeom, discMat);
         disc.rotation.x = -Math.PI / 2;
-        disc.position.set(0, -0.6, 0);
-        scene.add(disc);
+        disc.position.y = 0.01;
+        model.add(disc);
 
-        // Anims du modèle
+        scene.add(model);
         if (gltf.animations?.length) {
           mixer = new THREE.AnimationMixer(model);
           gltf.animations.forEach((clip) => mixer.clipAction(clip).play());
@@ -141,7 +139,6 @@ export default function Vestige_1() {
       (error) => console.error("Error loading GLTF:", error)
     );
 
-    // Resize handler
     const onWindowResize = () => {
       const w = canvas.clientWidth;
       const h = canvas.clientHeight;
@@ -151,7 +148,6 @@ export default function Vestige_1() {
     };
     window.addEventListener("resize", onWindowResize);
 
-    // Loop
     const clock = new THREE.Clock();
     const animate = () => {
       requestAnimationFrame(animate);
@@ -171,14 +167,125 @@ export default function Vestige_1() {
   }, []);
 
   useEffect(() => {
-    // … (le reste de ton orb + audio + captions identique)
+    const container = orbRef.current;
+    if (!container) return;
+
+    const glowParams = {
+      falloff: 0.1,
+      glowInternalRadius: 6,
+      glowSharpness: 0.5,
+      opacity: 1,
+      glowColor: "#ccfbff",
+    };
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(
+      75,
+      container.clientWidth / container.clientHeight,
+      0.1,
+      100
+    );
+    camera.position.set(0, 0, 2.5);
+    scene.add(camera);
+
+    const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    container.appendChild(renderer.domElement);
+
+    const orbMesh = Orb({
+      position: new THREE.Vector3(0, 0, 0),
+      glowParams,
+      scene,
+    });
+    orbMesh.scale.multiplyScalar(6);
+
+    const breatheTl = gsap.timeline({ repeat: -1, yoyo: true });
+    breatheTl.to(orbMesh.material.uniforms.glowInternalRadius, {
+      value: glowParams.glowInternalRadius + 1,
+      duration: 1.1,
+      ease: "sine.inOut",
+    });
+
+    if (!audioContextRef.current) {
+      audioContextRef.current = new (window.AudioContext ||
+        window.webkitAudioContext)();
+    }
+    const audioContext = audioContextRef.current;
+    const audioElement = narrationRef.current;
+
+    if (!audioSourceRef.current) {
+      audioSourceRef.current =
+        audioContext.createMediaElementSource(audioElement);
+      const analyser = audioContext.createAnalyser();
+      audioSourceRef.current.connect(analyser);
+      analyser.connect(audioContext.destination);
+
+      analyser.fftSize = 256;
+      const bufferLength = analyser.frequencyBinCount;
+      const dataArray = new Uint8Array(bufferLength);
+
+      const animate = () => {
+        requestAnimationFrame(animate);
+        analyser.getByteFrequencyData(dataArray);
+        const avg = dataArray.reduce((a, b) => a + b, 0) / bufferLength;
+        orbMesh.material.uniforms.glowInternalRadius.value =
+          glowParams.glowInternalRadius + avg / 30;
+        renderer.render(scene, camera);
+      };
+      animate();
+    }
+
+    audioElement.play().catch((e) => console.warn("Autoplay blocked:", e));
+
+    const onResize = () => {
+      renderer.setSize(container.clientWidth, container.clientHeight);
+      camera.aspect = container.clientWidth / container.clientHeight;
+      camera.updateProjectionMatrix();
+    };
+    window.addEventListener("resize", onResize);
+
+    return () => {
+      window.removeEventListener("resize", onResize);
+      container.removeChild(renderer.domElement);
+      orbMesh.geometry.dispose();
+      orbMesh.material.dispose();
+      renderer.dispose();
+    };
   }, []);
 
-  // … (les autres useEffect pour l’orb et les captions restent inchangés)
+  useEffect(() => {
+    const audio = narrationRef.current;
+    if (!audio) return;
+
+    let lastIdx = 0;
+    const findIdx = (t) => {
+      for (let i = captions.length - 1; i >= 0; i--) {
+        if (t >= captions[i].time) return i;
+      }
+      return 0;
+    };
+
+    const update = () => {
+      const idx = findIdx(audio.currentTime);
+      if (idx !== lastIdx) {
+        lastIdx = idx;
+        setCurrentIndex(idx);
+      }
+    };
+
+    audio.addEventListener("timeupdate", update);
+    return () => audio.removeEventListener("timeupdate", update);
+  }, [captions]);
 
   const handleReturn = () => {
+    // On signale qu'on revient pour activer le point suivant
     localStorage.setItem("pendingAdvance", "true");
+
+    // (Optionnel) on peut aussi conserver museumProgress si tu l’utilises ailleurs
     localStorage.setItem("museumProgress", "2");
+
+    // Retour vers la visite
     router.push("/visite_musee_5");
   };
 

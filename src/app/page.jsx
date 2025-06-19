@@ -27,12 +27,28 @@ export default function Home() {
 
   const captions = [
     {
-      time: 0,
-      text: "Bienvenue dans cette expérience immersive. Chaque phrase est synchronisée avec l'audio. Regardez comment le texte défile.",
+      time: 1.44,
+      text: "Bonjour et bienvenue au Muséum. Aujourd'hui, on vous propose une expérience un peu différente. Un voyage à travers le temps entre mer, terre et ciel.",
     },
     {
-      time: 8,
-      text: "La ligne actuelle devient rouge automatiquement. Merci d'avoir écouté cette démonstration.",
+      time: 11.68,
+      text: "Tout au long de la visite, vous allez pouvoir découvrir du contenu interactif directement sur votre smartphone. Pour cela, c'est très simple. A côté de certaines pièces, vous verrez de petites pastilles interactives signalées par une icône dédiée.",
+    },
+    {
+      time: 24.72,
+      text: "Il vous suffira alors de cliquer sur l'étape correspondante dans l'application, puis d'approcher votre téléphone de la puce interactive. Pas besoin d'installer quoi que ce soit, tout se lance automatiquement dans votre navigateur.",
+    },
+    {
+      time: 36.48,
+      text: "Pour commencer l'expérience, une première puce est intégrée sous cet écran. Approchez simplement votre téléphone pour lancer votre exploration.",
+    },
+    {
+      time: 44.0,
+      text: "Pour respecter le confort de tous les visiteurs, si vous avez des écouteurs, pensez à les utiliser. Certains contenus sont sonores pour une immersion plus riche.",
+    },
+    {
+      time: 53.08,
+      text: "Prenez votre temps, explorez à votre rythme et ouvrez l'œil. Ce que des fossiles ne disent pas au premier regard pourrait bien vous surprendre.",
     },
   ];
 
@@ -225,7 +241,7 @@ export default function Home() {
         <div className="narration">
           <audio
             ref={narrationRef}
-            src="/Audios/narration.m4a"
+            src="/Audios/Introduction.mp3"
             style={{ display: "none" }}
             onEnded={restartNarration}
           />
