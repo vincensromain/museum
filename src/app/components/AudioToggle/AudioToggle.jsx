@@ -1,9 +1,8 @@
-// AudioToggleButton.jsx
 "use client";
 
 import React, { useState } from "react";
 import { gsap } from "gsap";
-import AudioAnimatedIcon from "../AudioAnimatedIcon/AudioAnimatedIcon";
+import AudioAnimatedIcon from "../components/AudioAnimatedIcon/AudioAnimatedIcon"; // ajuste le chemin si besoin
 import "./AudioToggle.scss";
 
 export default function AudioToggleButton() {
@@ -18,32 +17,30 @@ export default function AudioToggleButton() {
         // Détection du type de fichier
         const src = audio.currentSrc || audio.src;
         const isWav = src.toLowerCase().endsWith(".wav");
-        const isMp3 = src.toLowerCase().endsWith(".mp3");
 
-        // Volume cible :
-        // - si on remet le son : 0.1 pour WAV, 1 pour MP3, 0.5 pour les autres
-        // - si on mute : 0 pour tous
-        let targetVolume;
-        if (!nextState) {
-          targetVolume = 0;
-        } else if (isWav) {
-          targetVolume = 0.1;
-        } else if (isMp3) {
-          targetVolume = 1;
+        // Volume cible : 0 si on mute, sinon 0.1 pour WAV et 1 pour les autres
+        const targetVolume = !nextState ? 0 : isWav ? 0.1 : 1;
+
+        // Si on a un GainNode attaché, anime sa valeur, sinon anime audio.volume
+        const gainNode = audio._gainNode;
+        if (gainNode) {
+          gsap.to(gainNode.gain, {
+            value: targetVolume,
+            duration: 0.5,
+            ease: "power1.inOut",
+          });
         } else {
-          targetVolume = 0.5; // fallback pour autres formats
+          gsap.to(audio, {
+            volume: targetVolume,
+            duration: 0.5,
+            ease: "power1.inOut",
+          });
         }
 
-        gsap.to(audio, {
-          volume: targetVolume,
-          duration: 0.5,
-          ease: "power1.inOut",
-          onStart: () => {
-            if (nextState) {
-              audio.play().catch((err) => console.warn("Playback error:", err));
-            }
-          },
-        });
+        // Relance la lecture si on réactive le son
+        if (nextState) {
+          audio.play().catch((err) => console.warn("Playback error:", err));
+        }
       });
 
       return nextState;
