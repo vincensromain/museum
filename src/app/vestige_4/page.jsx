@@ -369,27 +369,6 @@ export default function Vestige_4() {
         <IconMuseum icon="svgDrag" />
       </div>
 
-      <div className="skin">
-        <div className="skin_container">
-          <div
-            className={`skin_btn ${
-              modelUrl.endsWith("Ammonite.glb") ? "active" : ""
-            }`}
-            onClick={handleNormal}
-          >
-            Shastasaure
-          </div>
-          <div
-            className={`skin_btn ${
-              modelUrl.endsWith("Ammonite.glb") ? "active" : ""
-            }`}
-            onClick={handleEclate}
-          >
-            Bélemnites
-          </div>
-        </div>
-      </div>
-
       <div className="naration_text_content">
         <div className="naration_text">
           <audio
