@@ -13,6 +13,7 @@ import Orb from "../components/Orb/Orb";
 
 export default function Vestige_1() {
   const router = useRouter();
+  const [hasInteracted, setHasInteracted] = useState(false);
 
   // URL du modèle actif
   const [modelUrl, setModelUrl] = useState("/models/Dinos/Ammonite.glb");
@@ -49,14 +50,34 @@ export default function Vestige_1() {
     },
   ];
 
-  // 1) Audio : volume initial puis lecture
+  // Ajoutez un gestionnaire d'événements pour les interactions
+  useEffect(() => {
+    const handleInteraction = () => {
+      setHasInteracted(true);
+      // Supprimez les écouteurs d'événements après la première interaction
+      document.removeEventListener("click", handleInteraction);
+      document.removeEventListener("touchstart", handleInteraction);
+    };
+
+    // Ajoutez les écouteurs d'événements pour les clics et les touchers
+    document.addEventListener("click", handleInteraction);
+    document.addEventListener("touchstart", handleInteraction);
+
+    // Nettoyez les écouteurs d'événements lorsque le composant est démonté
+    return () => {
+      document.removeEventListener("click", handleInteraction);
+      document.removeEventListener("touchstart", handleInteraction);
+    };
+  }, []);
+
+  // 1) Audio : volume initial puis lecture après interaction
   useEffect(() => {
     const audio = narrationRef.current;
-    if (!audio) return;
+    if (!audio || !hasInteracted) return;
     const isOn = JSON.parse(localStorage.getItem("isAudioOn") ?? "true");
     audio.volume = isOn ? 1 : 0;
     audio.play().catch(() => {});
-  }, []);
+  }, [hasInteracted]);
 
   // 2) Écoute du toggleAudio pour mute/unmute en fondu
   useEffect(() => {
