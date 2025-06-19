@@ -77,6 +77,10 @@ $gradient-variant-1: linear-gradient(
       width: 140px;
       height: 140px;
       canvas {
+        position: absolute;
+        top: -450px;
+        left: 50%;
+        transform: translateX(-50%);
         width: 140px;
         height: 140px;
       }
