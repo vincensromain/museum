@@ -54,13 +54,18 @@ export default function Vestige_1() {
   useEffect(() => {
     const handleInteraction = () => {
       setHasInteracted(true);
+      // Supprimez les écouteurs d'événements après la première interaction
       document.removeEventListener("click", handleInteraction);
       document.removeEventListener("touchstart", handleInteraction);
     };
 
+    // Ajoutez les écouteurs d'événements pour les clics et les touchers
     document.addEventListener("click", handleInteraction);
-    document.addEventListener("touchstart", handleInteraction);
+    document.addEventListener("touchstart", handleInteraction, {
+      passive: true,
+    });
 
+    // Nettoyez les écouteurs d'événements lorsque le composant est démonté
     return () => {
       document.removeEventListener("click", handleInteraction);
       document.removeEventListener("touchstart", handleInteraction);
@@ -71,9 +76,18 @@ export default function Vestige_1() {
   useEffect(() => {
     const audio = narrationRef.current;
     if (!audio || !hasInteracted) return;
-    const isOn = JSON.parse(localStorage.getItem("isAudioOn") ?? "true");
-    audio.volume = isOn ? 1 : 0;
-    audio.play().catch(console.error);
+
+    const playAudio = async () => {
+      try {
+        const isOn = JSON.parse(localStorage.getItem("isAudioOn") ?? "true");
+        audio.volume = isOn ? 1 : 0;
+        await audio.play();
+      } catch (err) {
+        console.error("Erreur lors de la lecture audio:", err);
+      }
+    };
+
+    playAudio();
   }, [hasInteracted]);
 
   // 2) Écoute du toggleAudio pour mute/unmute en fondu
