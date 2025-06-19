@@ -1,14 +1,21 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { gsap } from "gsap";
 import AudioAnimatedIcon from "../AudioAnimatedIcon/AudioAnimatedIcon";
 import "./AudioToggle.scss";
 
 export default function AudioToggleButton() {
-  const [isPlaying, setIsPlaying] = useState(() =>
-    JSON.parse(localStorage.getItem("isAudioOn") ?? "true")
-  );
+  const [isPlaying, setIsPlaying] = useState(true);
+
+  // → lecture de localStorage uniquement côté client
+  useEffect(() => {
+    const saved =
+      typeof window !== "undefined" ? localStorage.getItem("isAudioOn") : null;
+    if (saved !== null) {
+      setIsPlaying(JSON.parse(saved));
+    }
+  }, []);
 
   const toggleAudio = () => {
     setIsPlaying((prev) => {
@@ -18,7 +25,6 @@ export default function AudioToggleButton() {
       audios.forEach((audio) => {
         const gainNode = audio._gainNode;
         const targetVolume = nextState ? 1 : 0;
-
         if (gainNode) {
           gsap.to(gainNode.gain, {
             value: targetVolume,
@@ -34,11 +40,11 @@ export default function AudioToggleButton() {
         }
       });
 
-      // 1) Dispatch de l'événement global
+      // dispatch global
       window.dispatchEvent(
         new CustomEvent("toggleAudio", { detail: nextState })
       );
-      // 2) Persistance
+      // persistence
       localStorage.setItem("isAudioOn", JSON.stringify(nextState));
       return nextState;
     });
