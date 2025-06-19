@@ -14,6 +14,7 @@ import Orb from "../components/Orb/Orb";
 export default function Vestige_1() {
   const router = useRouter();
   const [audioContext, setAudioContext] = useState(null);
+  const playButtonRef = useRef(null);
 
   // URL du modèle actif
   const [modelUrl, setModelUrl] = useState("/models/Dinos/Ammonite.glb");
@@ -52,7 +53,7 @@ export default function Vestige_1() {
 
   const handlePlayAudio = () => {
     const audio = narrationRef.current;
-    if (!audio) return;
+    if (!audio || !playButtonRef.current) return;
 
     const playAudio = async () => {
       try {
@@ -60,6 +61,17 @@ export default function Vestige_1() {
           window.webkitAudioContext)();
         setAudioContext(newAudioContext);
         await audio.play();
+
+        // Faire disparaître le bouton avec un effet d'opacité
+        gsap.to(playButtonRef.current, {
+          opacity: 0,
+          duration: 0.5,
+          onComplete: () => {
+            if (playButtonRef.current) {
+              playButtonRef.current.style.display = "none";
+            }
+          },
+        });
       } catch (err) {
         console.error("Erreur lors de la lecture audio:", err);
       }
@@ -384,10 +396,12 @@ export default function Vestige_1() {
       </div>
 
       <button
+        ref={playButtonRef}
         onClick={handlePlayAudio}
+        className="skin_btn"
         style={{
           position: "absolute",
-          top: "50%",
+          top: "20px",
           left: "50%",
           transform: "translateX(-50%)",
           zIndex: 1000,
