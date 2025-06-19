@@ -54,16 +54,13 @@ export default function Vestige_1() {
   useEffect(() => {
     const handleInteraction = () => {
       setHasInteracted(true);
-      // Supprimez les écouteurs d'événements après la première interaction
       document.removeEventListener("click", handleInteraction);
       document.removeEventListener("touchstart", handleInteraction);
     };
 
-    // Ajoutez les écouteurs d'événements pour les clics et les touchers
     document.addEventListener("click", handleInteraction);
     document.addEventListener("touchstart", handleInteraction);
 
-    // Nettoyez les écouteurs d'événements lorsque le composant est démonté
     return () => {
       document.removeEventListener("click", handleInteraction);
       document.removeEventListener("touchstart", handleInteraction);
@@ -76,7 +73,7 @@ export default function Vestige_1() {
     if (!audio || !hasInteracted) return;
     const isOn = JSON.parse(localStorage.getItem("isAudioOn") ?? "true");
     audio.volume = isOn ? 1 : 0;
-    audio.play().catch(() => {});
+    audio.play().catch(console.error);
   }, [hasInteracted]);
 
   // 2) Écoute du toggleAudio pour mute/unmute en fondu
@@ -180,7 +177,6 @@ export default function Vestige_1() {
     const scene = sceneRef.current;
     if (!scene) return;
 
-    // Purge de l’ancien modèle
     if (currentModelRef.current) {
       scene.remove(currentModelRef.current);
       currentModelRef.current.traverse((child) => {
@@ -196,7 +192,6 @@ export default function Vestige_1() {
       currentModelRef.current = null;
     }
 
-    // Chargement du nouveau
     const loader = new GLTFLoader();
     loader.load(
       modelUrl,
@@ -204,7 +199,6 @@ export default function Vestige_1() {
         const model = gltf.scene;
         model.scale.set(10, 10, 10);
 
-        // Disque shader
         const radius = 0.3;
         const discGeom = new THREE.CircleGeometry(radius, 32);
         const discMat = new THREE.ShaderMaterial({
@@ -243,7 +237,6 @@ export default function Vestige_1() {
         scene.add(model);
         currentModelRef.current = model;
 
-        // Animations
         if (gltf.animations?.length) {
           mixerRef.current = new THREE.AnimationMixer(model);
           gltf.animations.forEach((clip) =>
@@ -260,7 +253,7 @@ export default function Vestige_1() {
   useEffect(() => {
     const container = orbRef.current;
     const audioEl = narrationRef.current;
-    if (!container || !audioEl) return;
+    if (!container || !audioEl || !hasInteracted) return;
 
     const glowParams = {
       falloff: 0.1,
@@ -319,8 +312,6 @@ export default function Vestige_1() {
     };
     animateOrb();
 
-    audioEl.play().catch(() => {});
-
     const onResize = () => {
       renderer.setSize(container.clientWidth, container.clientHeight);
       camera.aspect = container.clientWidth / container.clientHeight;
@@ -335,7 +326,7 @@ export default function Vestige_1() {
       orbMesh.material.dispose();
       renderer.dispose();
     };
-  }, []);
+  }, [hasInteracted]);
 
   // 7) Synchronisation des sous-titres
   useEffect(() => {
