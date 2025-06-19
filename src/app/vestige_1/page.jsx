@@ -9,8 +9,6 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 
 import "./Vestige_1.scss";
 import IconMuseum from "../components/IconsMuseum/IconsMuseum";
-import VestigeContent from "../components/VestigeContent/VestigeContent";
-import Narrator from "../components/Narrator/Narrator";
 import Skin from "../components/Skin/Skin";
 import Orb from "../components/Orb/Orb";
 
@@ -32,7 +30,7 @@ export default function Vestige_1() {
     },
     {
       time: 12.4,
-      text: "A l'intérieur se cachait un animal proche du poulpe qui se déplaçait par jets d'eau en contrôlant sa flottabilité grâce à des chambres remplies d'air. Un vrai sous marin naturel.",
+      text: "À l'intérieur se cachait un animal proche du poulpe qui se déplaçait par jets d'eau en contrôlant sa flottabilité grâce à des chambres remplies d'air. Un vrai sous-marin naturel.",
     },
     {
       time: 23.0,
@@ -40,11 +38,21 @@ export default function Vestige_1() {
     },
     {
       time: 35.4,
-      text: "Aujourd'hui, leurs coquilles fossilisées ornent encore les falaises du monde entier et nous rappelle que la mer fut le tout premier royaume de la vie.",
+      text: "Aujourd'hui, leurs coquilles fossilisées ornent encore les falaises du monde entier et nous rappellent que la mer fut le tout premier royaume de la vie.",
     },
   ];
 
-  // → Écoute globale du toggle audio
+  // 1) Initialisation du volume selon l'état global
+  useEffect(() => {
+    const audio = narrationRef.current;
+    if (!audio) return;
+
+    const isOn = JSON.parse(localStorage.getItem("isAudioOn") ?? "true");
+    audio.volume = isOn ? 1 : 0;
+    audio.play().catch(() => {});
+  }, []);
+
+  // 2) Écoute des futurs toggles (mute/unmute) sans pause
   useEffect(() => {
     const audio = narrationRef.current;
     if (!audio) return;
@@ -55,10 +63,6 @@ export default function Vestige_1() {
         volume: isOn ? 1 : 0,
         duration: 0.5,
         ease: "power1.inOut",
-        onComplete: () => {
-          if (!isOn) audio.pause();
-          else audio.play().catch(() => {});
-        },
       });
     };
 
@@ -68,7 +72,7 @@ export default function Vestige_1() {
     };
   }, []);
 
-  // Animation du drag hint
+  // Hint drag GSAP
   useEffect(() => {
     gsap.fromTo(
       dragRef.current,
@@ -77,7 +81,7 @@ export default function Vestige_1() {
     );
   }, []);
 
-  // Setup du canvas Three.js + GLTF
+  // Three.js + GLTF Loader
   useEffect(() => {
     const canvas = canvasRef.current;
     const width = canvas.clientWidth;
@@ -106,7 +110,6 @@ export default function Vestige_1() {
     controls.enableDamping = true;
     controls.enablePan = false;
     controls.enableZoom = true;
-
     const initialPolar = Math.acos(
       (camera.position.y - controls.target.y) /
         camera.position.distanceTo(controls.target)
@@ -116,12 +119,13 @@ export default function Vestige_1() {
     controls.maxDistance = camera.position.distanceTo(controls.target);
 
     controls.addEventListener("start", () => {
-      if (dragRef.current)
+      if (dragRef.current) {
         gsap.to(dragRef.current, { opacity: 0, duration: 0.5 });
+      }
     });
 
-    const loader = new GLTFLoader();
     let mixer;
+    const loader = new GLTFLoader();
     loader.load(
       "/models/Dinos/Ammonite.glb",
       (gltf) => {
@@ -201,7 +205,7 @@ export default function Vestige_1() {
     };
   }, []);
 
-  // Setup de l'orb audio-réactive
+  // Orb audio-réactive
   useEffect(() => {
     const container = orbRef.current;
     if (!container) return;
@@ -256,15 +260,13 @@ export default function Vestige_1() {
       const analyser = audioContext.createAnalyser();
       audioSourceRef.current.connect(analyser);
       analyser.connect(audioContext.destination);
-
       analyser.fftSize = 256;
-      const bufferLength = analyser.frequencyBinCount;
-      const dataArray = new Uint8Array(bufferLength);
 
+      const dataArray = new Uint8Array(analyser.frequencyBinCount);
       const animateOrb = () => {
         requestAnimationFrame(animateOrb);
         analyser.getByteFrequencyData(dataArray);
-        const avg = dataArray.reduce((a, b) => a + b, 0) / bufferLength;
+        const avg = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
         orbMesh.material.uniforms.glowInternalRadius.value =
           glowParams.glowInternalRadius + avg / 30;
         renderer.render(scene, camera);
@@ -293,8 +295,6 @@ export default function Vestige_1() {
   // Synchronisation des sous-titres
   useEffect(() => {
     const audio = narrationRef.current;
-    if (!audio) return;
-
     let lastIdx = 0;
     const findIdx = (t) => {
       for (let i = captions.length - 1; i >= 0; i--) {
@@ -302,7 +302,6 @@ export default function Vestige_1() {
       }
       return 0;
     };
-
     const update = () => {
       const idx = findIdx(audio.currentTime);
       if (idx !== lastIdx) {
@@ -310,11 +309,11 @@ export default function Vestige_1() {
         setCurrentIndex(idx);
       }
     };
-
     audio.addEventListener("timeupdate", update);
     return () => audio.removeEventListener("timeupdate", update);
   }, [captions]);
 
+  // Bouton “Retour”
   const handleReturn = () => {
     localStorage.setItem("pendingAdvance", "true");
     localStorage.setItem("museumProgress", "2");
@@ -327,11 +326,15 @@ export default function Vestige_1() {
         <IconMuseum icon="svgArrowBack" />
         <span className="go_back_text">Retour</span>
       </div>
+
       <Skin />
+
       <div className="naration_orb" ref={orbRef}></div>
+
       <div ref={dragRef} className="svg_drag">
         <IconMuseum icon="svgDrag" />
       </div>
+
       <div className="naration_text_content">
         <div className="naration_text">
           <audio
@@ -349,6 +352,7 @@ export default function Vestige_1() {
           ))}
         </div>
       </div>
+
       <div className="model_canvas_container">
         <canvas ref={canvasRef} className="model_canvas" />
       </div>

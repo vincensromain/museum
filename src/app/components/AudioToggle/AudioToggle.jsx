@@ -6,8 +6,9 @@ import AudioAnimatedIcon from "../AudioAnimatedIcon/AudioAnimatedIcon";
 import "./AudioToggle.scss";
 
 export default function AudioToggleButton() {
-  const [isPlaying, setIsPlaying] = useState(true);
-  const [isAudioActuallyPlaying, setIsAudioActuallyPlaying] = useState(true);
+  const [isPlaying, setIsPlaying] = useState(() =>
+    JSON.parse(localStorage.getItem("isAudioOn") ?? "true")
+  );
 
   const toggleAudio = () => {
     setIsPlaying((prev) => {
@@ -15,11 +16,9 @@ export default function AudioToggleButton() {
       const audios = document.querySelectorAll("audio");
 
       audios.forEach((audio) => {
-        const src = audio.currentSrc || audio.src;
-        const isWav = src.toLowerCase().endsWith(".wav");
-        const targetVolume = !nextState ? 0 : isWav ? 0.1 : 1;
-
         const gainNode = audio._gainNode;
+        const targetVolume = nextState ? 1 : 0;
+
         if (gainNode) {
           gsap.to(gainNode.gain, {
             value: targetVolume,
@@ -33,15 +32,14 @@ export default function AudioToggleButton() {
             ease: "power1.inOut",
           });
         }
-
-        if (nextState) {
-          audio.play().catch((err) => console.warn("Playback error:", err));
-        }
       });
+
+      // 1) Dispatch de l'événement global
       window.dispatchEvent(
         new CustomEvent("toggleAudio", { detail: nextState })
       );
-      setIsAudioActuallyPlaying(nextState);
+      // 2) Persistance
+      localStorage.setItem("isAudioOn", JSON.stringify(nextState));
       return nextState;
     });
   };
@@ -53,7 +51,7 @@ export default function AudioToggleButton() {
       onClick={toggleAudio}
       aria-label={isPlaying ? "Couper le son" : "Activer le son"}
     >
-      <AudioAnimatedIcon isPlaying={isAudioActuallyPlaying} />
+      <AudioAnimatedIcon isPlaying={isPlaying} />
     </button>
   );
 }
