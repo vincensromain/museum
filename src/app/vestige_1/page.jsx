@@ -13,7 +13,7 @@ import Orb from "../components/Orb/Orb";
 
 export default function Vestige_1() {
   const router = useRouter();
-  const [hasInteracted, setHasInteracted] = useState(false);
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
 
   // URL du modèle actif
   const [modelUrl, setModelUrl] = useState("/models/Dinos/Ammonite.glb");
@@ -50,72 +50,48 @@ export default function Vestige_1() {
     },
   ];
 
-  // Ajoutez un gestionnaire d'événements pour les interactions tactiles
-  useEffect(() => {
-    const handleInteraction = () => {
-      setHasInteracted(true);
-      document.removeEventListener("touchstart", handleInteraction);
-      document.removeEventListener("click", handleInteraction);
-    };
-
-    // Priorité aux événements tactiles pour mobile
-    document.addEventListener("touchstart", handleInteraction, {
-      passive: true,
-    });
-    document.addEventListener("click", handleInteraction);
-
-    return () => {
-      document.removeEventListener("touchstart", handleInteraction);
-      document.removeEventListener("click", handleInteraction);
-    };
-  }, []);
-
-  // 1) Audio : volume initial puis lecture après interaction
-  useEffect(() => {
+  const handlePlayAudio = () => {
     const audio = narrationRef.current;
-    if (!audio || !hasInteracted) return;
+    if (!audio) return;
 
     const playAudio = async () => {
       try {
-        const isOn = JSON.parse(localStorage.getItem("isAudioOn") ?? "true");
-        audio.volume = isOn ? 1 : 0;
         await audio.play();
+        setIsAudioPlaying(true);
       } catch (err) {
         console.error("Erreur lors de la lecture audio:", err);
       }
     };
 
     playAudio();
-  }, [hasInteracted]);
+  };
 
-  // 2) Écoute du toggleAudio pour mute/unmute en fondu
+  // Synchronisation des sous-titres
   useEffect(() => {
     const audio = narrationRef.current;
     if (!audio) return;
-    const handleToggle = (e) => {
-      const isOn = e.detail;
-      gsap.to(audio, {
-        volume: isOn ? 1 : 0,
-        duration: 0.5,
-        ease: "power1.inOut",
-      });
+
+    let lastIdx = 0;
+    const findIdx = (t) => {
+      for (let i = captions.length - 1; i >= 0; i--) {
+        if (t >= captions[i].time) return i;
+      }
+      return 0;
     };
-    window.addEventListener("toggleAudio", handleToggle);
-    return () => window.removeEventListener("toggleAudio", handleToggle);
+
+    const update = () => {
+      const idx = findIdx(audio.currentTime);
+      if (idx !== lastIdx) {
+        lastIdx = idx;
+        setCurrentIndex(idx);
+      }
+    };
+
+    audio.addEventListener("timeupdate", update);
+    return () => audio.removeEventListener("timeupdate", update);
   }, []);
 
-  // 3) Hint drag
-  useEffect(() => {
-    if (dragRef.current) {
-      gsap.fromTo(
-        dragRef.current,
-        { x: -10 },
-        { x: 10, duration: 1, ease: "power3.inOut", repeat: -1, yoyo: true }
-      );
-    }
-  }, []);
-
-  // 4) Initialisation Three.js (scene, caméra, renderer, controls)
+  // Initialisation Three.js (scene, caméra, renderer, controls)
   useEffect(() => {
     const canvas = canvasRef.current;
     const width = canvas.clientWidth;
@@ -184,7 +160,7 @@ export default function Vestige_1() {
     };
   }, []);
 
-  // 5) Chargement dynamique du modèle (normal OU éclaté)
+  // Chargement dynamique du modèle (normal OU éclaté)
   useEffect(() => {
     const scene = sceneRef.current;
     if (!scene) return;
@@ -261,115 +237,14 @@ export default function Vestige_1() {
     );
   }, [modelUrl]);
 
-  // 6) Orb audio-réactive
-  useEffect(() => {
-    const container = orbRef.current;
-    const audioEl = narrationRef.current;
-    if (!container || !audioEl || !hasInteracted) return;
-
-    const glowParams = {
-      falloff: 0.1,
-      glowInternalRadius: 6,
-      glowSharpness: 0.5,
-      opacity: 1,
-      glowColor: "#ccfbff",
-    };
-
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(
-      75,
-      container.clientWidth / container.clientHeight,
-      0.1,
-      100
-    );
-    camera.position.set(0, 0, 2.5);
-    scene.add(camera);
-
-    const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
-    renderer.setSize(container.clientWidth, container.clientHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    container.appendChild(renderer.domElement);
-
-    const orbMesh = Orb({
-      position: new THREE.Vector3(0, 0, 0),
-      glowParams,
-      scene,
-    });
-    orbMesh.scale.multiplyScalar(6);
-
-    gsap
-      .timeline({ repeat: -1, yoyo: true })
-      .to(orbMesh.material.uniforms.glowInternalRadius, {
-        value: glowParams.glowInternalRadius + 1,
-        duration: 1.1,
-        ease: "sine.inOut",
-      });
-
-    const audioContext = new (window.AudioContext ||
-      window.webkitAudioContext)();
-    const analyser = audioContext.createAnalyser();
-    const source = audioContext.createMediaElementSource(audioEl);
-    source.connect(analyser);
-    analyser.connect(audioContext.destination);
-    analyser.fftSize = 256;
-    const dataArray = new Uint8Array(analyser.frequencyBinCount);
-
-    const animateOrb = () => {
-      requestAnimationFrame(animateOrb);
-      analyser.getByteFrequencyData(dataArray);
-      const avg = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
-      orbMesh.material.uniforms.glowInternalRadius.value =
-        glowParams.glowInternalRadius + avg / 30;
-      renderer.render(scene, camera);
-    };
-    animateOrb();
-
-    const onResize = () => {
-      renderer.setSize(container.clientWidth, container.clientHeight);
-      camera.aspect = container.clientWidth / container.clientHeight;
-      camera.updateProjectionMatrix();
-    };
-    window.addEventListener("resize", onResize);
-
-    return () => {
-      window.removeEventListener("resize", onResize);
-      container.removeChild(renderer.domElement);
-      orbMesh.geometry.dispose();
-      orbMesh.material.dispose();
-      renderer.dispose();
-    };
-  }, [hasInteracted]);
-
-  // 7) Synchronisation des sous-titres
-  useEffect(() => {
-    const audio = narrationRef.current;
-    if (!audio) return;
-    let lastIdx = 0;
-    const findIdx = (t) => {
-      for (let i = captions.length - 1; i >= 0; i--) {
-        if (t >= captions[i].time) return i;
-      }
-      return 0;
-    };
-    const update = () => {
-      const idx = findIdx(audio.currentTime);
-      if (idx !== lastIdx) {
-        lastIdx = idx;
-        setCurrentIndex(idx);
-      }
-    };
-    audio.addEventListener("timeupdate", update);
-    return () => audio.removeEventListener("timeupdate", update);
-  }, []);
-
-  // 8) Retour
+  // Retour
   const handleReturn = () => {
     localStorage.setItem("pendingAdvance", "true");
     localStorage.setItem("museumProgress", "2");
     router.push("/visite_musee_2");
   };
 
-  // 9) Vues normal / éclatée
+  // Vues normal / éclatée
   const handleNormal = () => setModelUrl("/models/Dinos/Ammonite.glb");
   const handleEclate = () => setModelUrl("/models/Dinos/Ammonite_cut.glb");
 
@@ -428,6 +303,34 @@ export default function Vestige_1() {
       <div className="model_canvas_container">
         <canvas ref={canvasRef} className="model_canvas" />
       </div>
+
+      <button
+        onClick={handlePlayAudio}
+        style={{
+          position: "absolute",
+          top: "20px",
+          left: "50%",
+          transform: "translateX(-50%)",
+          zIndex: 1000,
+        }}
+      >
+        Jouer l'audio
+      </button>
+
+      {isAudioPlaying && (
+        <div
+          style={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            width: "100px",
+            height: "300px",
+            backgroundColor: "rgba(0, 255, 0, 0.5)",
+            zIndex: 99999,
+          }}
+        ></div>
+      )}
     </section>
   );
 }
