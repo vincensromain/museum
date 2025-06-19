@@ -35,15 +35,15 @@ $gradient-variant-1: linear-gradient(
     transform: translateX(-50%);
   }
   .skin {
+    position: absolute;
+    top: 40%;
+    left: 80%;
+    z-index: 999999;
     .skin_container {
-      position: absolute;
-      top: 40%;
-      right: 17px;
       display: flex;
       flex-direction: column;
       justify-content: center;
       gap: 10px;
-      z-index: 999;
 
       .skin_btn {
         border-radius: 27px;
@@ -98,8 +98,8 @@ $gradient-variant-1: linear-gradient(
         font-size: 20px;
         color: rgb(255, 255, 255);
         opacity: 0.6;
-        width: 80%;
-        top: -50px;
+        width: 70%;
+        top: -80px;
         opacity: 0;
         transition: opacity 0.3s ease-in-out;
         text-align: center;
