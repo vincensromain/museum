@@ -374,14 +374,14 @@ export default function Vestige_2() {
           >
             Shastasaure
           </div>
-          <div
+          {/* <div
             className={`skin_btn ${
               modelUrl.endsWith("Belemnites.glb") ? "active" : ""
             }`}
             onClick={handleEclate}
           >
             Bélemnites
-          </div>
+          </div> */}
         </div>
       </div>
 
